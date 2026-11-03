@@ -88,7 +88,7 @@ namespace gdjs {
             this._light.shadow.camera.updateProjectionMatrix();
           }
 
-          private _updateShadowMapSize(): void {
+          private _updateShadowMapSize(isWebGPUBackend: boolean): void {
             if (!this._shadowMapDirty) {
               return;
             }
@@ -99,10 +99,36 @@ namespace gdjs {
               this._shadowMapSize
             );
 
-            // Force the recreation of the shadow map texture:
+            if (isWebGPUBackend) {
+              // The WebGPU `ShadowNode` owns its render target and resizes it
+              // from `shadow.mapSize` on every frame. Disposing and nulling
+              // `shadow.map` (the WebGL idiom below) would instead leave the
+              // node pointing at a disposed texture and permanently break
+              // shadows. Only mark the shadow for an update.
+              this._light.shadow.needsUpdate = true;
+              return;
+            }
+
+            // `WebGLShadowMap` only re-creates the shadow map texture when
+            // `shadow.map` is null: force its recreation for the new size.
             this._light.shadow.map?.dispose();
             this._light.shadow.map = null;
             this._light.shadow.needsUpdate = true;
+          }
+
+          /**
+           * Whether the game is currently rendered with the WebGPU backend.
+           * Some Three.js shadow APIs (shadow map re-creation) differ between
+           * WebGL and WebGPU.
+           */
+          private _isWebGPUBackend(target: gdjs.EffectsTarget): boolean {
+            try {
+              const game = target.getRuntimeScene().getGame();
+              const adapter = game.getRenderer().getThreeAdapter();
+              return !!adapter && adapter.getBackendType() === 'webgpu';
+            } catch (error) {
+              return false;
+            }
           }
 
           isEnabled(target: EffectsTarget): boolean {
@@ -155,7 +181,7 @@ namespace gdjs {
             const scene = target.getRuntimeScene().getScene();
             const inverseWorldScale = scene.getRenderer3DInverseWorldScale();
 
-            this._updateShadowMapSize();
+            this._updateShadowMapSize(this._isWebGPUBackend(target));
 
             // Avoid shadow acne due to depth buffer precision.
             const biasMultiplier =

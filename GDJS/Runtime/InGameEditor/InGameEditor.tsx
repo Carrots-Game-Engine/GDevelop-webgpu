@@ -2473,8 +2473,10 @@ namespace gdjs {
     private _updateSelectionBox() {
       const inputManager = this._runtimeGame.getInputManager();
       const runtimeGame = this._runtimeGame;
-      const threeRenderer = runtimeGame.getRenderer().getThreeRenderer();
-      if (!threeRenderer) return;
+      // Any Three.js backend (WebGL or WebGPU) can display the editor gizmos.
+      // `getThreeRenderer()` is intentionally null for WebGPU, so gate on the
+      // backend-agnostic availability check instead of on the WebGL renderer.
+      if (!runtimeGame.getRenderer().isThreeRenderingAvailable()) return;
       const currentScene = this._currentScene;
       if (!currentScene) return;
       const editedInstanceContainer = this._editedInstanceContainer;
@@ -3630,8 +3632,12 @@ namespace gdjs {
       runtimeObject: gdjs.RuntimeObject | null;
     } | null {
       const currentScene = this._currentScene;
-      const threeRenderer = this._runtimeGame.getRenderer().getThreeRenderer();
-      if (!currentScene || !threeRenderer) return null;
+      if (
+        !currentScene ||
+        !this._runtimeGame.getRenderer().isThreeRenderingAvailable()
+      ) {
+        return null;
+      }
 
       // Only check layer 0, on which Three.js objects are by default,
       // and move selection boxes + dragged object to layer 1 so they

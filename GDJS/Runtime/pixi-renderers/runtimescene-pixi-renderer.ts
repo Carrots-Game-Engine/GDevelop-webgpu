@@ -170,11 +170,11 @@ namespace gdjs {
             // Render a layer with 3D rendering, and possibly some 2D rendering too.
             const threeScene = runtimeLayerRenderer.getThreeScene();
             const threeCamera = runtimeLayerRenderer.getThreeCamera();
-            const threeEffectComposer =
-              runtimeLayerRenderer.getThreeEffectComposer();
+            const postProcessingPipeline =
+              runtimeLayerRenderer.getPostProcessingPipeline();
 
             // Render the 3D objects of this layer.
-            if (threeScene && threeCamera && threeEffectComposer) {
+            if (threeScene && threeCamera && postProcessingPipeline) {
               // TODO (3D) - optimization: do this at the beginning for all layers that are 2d+3d?
               // So the second pass is clearer (just rendering 2d or 3d layers without doing PixiJS renders in between).
               if (
@@ -256,14 +256,12 @@ namespace gdjs {
               // even 3D objects.
               threeRenderer.clearDepth();
               if (runtimeLayerRenderer.hasPostProcessingPass()) {
-                // Whatever the pass rendering the scene is, it must clear the
-                // composer buffers with a transparent color, so that the parts
-                // of the layer where nothing is rendered stay transparent (the
-                // layers rendered before this one must remain visible).
-                const clearAlpha = threeRenderer.getClearAlpha();
-                threeRenderer.setClearAlpha(0);
-                threeEffectComposer.render();
-                threeRenderer.setClearAlpha(clearAlpha);
+                // The pipeline renders the scene and applies the effects. It
+                // clears its buffers with a transparent color, so that the
+                // parts of the layer where nothing is rendered stay
+                // transparent (the layers rendered before this one must remain
+                // visible).
+                runtimeLayerRenderer.renderPostProcessing();
               } else {
                 threeRenderer.render(threeScene, threeCamera);
               }
@@ -329,7 +327,18 @@ namespace gdjs {
           }
 
           renderer.clearDepth();
-          threeAdapter!.render(threeScene, threeCamera);
+          // When an effect registered a WebGPU post-processing pass, render the
+          // scene through the `RenderPipeline` (TSL nodes) instead of directly.
+          const postProcessingPipeline =
+            runtimeLayerRenderer.getPostProcessingPipeline();
+          if (
+            postProcessingPipeline &&
+            runtimeLayerRenderer.hasPostProcessingPass()
+          ) {
+            runtimeLayerRenderer.renderPostProcessing();
+          } else {
+            threeAdapter!.render(threeScene, threeCamera);
+          }
           this._layerRenderingMetrics.rendered3DLayersCount++;
         }
 
@@ -409,8 +418,12 @@ namespace gdjs {
     updateWithoutDrawing() {
       const runtimeGameRenderer = this._runtimeGameRenderer;
       if (!runtimeGameRenderer) return;
+      // Backend-agnostic availability (WebGL or WebGPU). `getThreeRenderer()`
+      // is intentionally null for WebGPU, so it must not gate the matrix
+      // update: matrix updates are what raycasts and game logic read.
+      if (!runtimeGameRenderer.isThreeRenderingAvailable()) return;
       const threeRenderer = runtimeGameRenderer.getThreeRenderer();
-      if (!threeRenderer || threeRenderer.xr.isPresenting) return;
+      if (threeRenderer && threeRenderer.xr.isPresenting) return;
 
       for (const runtimeLayer of this._runtimeScene._orderedLayers) {
         if (!runtimeLayer.isVisible()) continue;
@@ -419,11 +432,9 @@ namespace gdjs {
         const runtimeLayerRenderer = runtimeLayer.getRenderer();
         const threeScene = runtimeLayerRenderer.getThreeScene();
         const threeCamera = runtimeLayerRenderer.getThreeCamera();
-        if (
-          !threeScene ||
-          !threeCamera ||
-          !runtimeLayerRenderer.getThreeEffectComposer()
-        ) {
+        // The effect composer only exists with the WebGL backend; it is not
+        // needed to update the world matrices.
+        if (!threeScene || !threeCamera) {
           continue;
         }
         if (threeScene.matrixWorldAutoUpdate) threeScene.updateMatrixWorld();

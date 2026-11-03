@@ -7,36 +7,6 @@
 namespace gdjs {
   const logger = new gdjs.Logger('LayerPixiRenderer');
 
-  type PostProcessingPass = {
-    pass: THREE_ADDONS.Pass;
-    effectName: string;
-  };
-
-  /**
-   * @returns 4 if the canvas is antialiased and the GPU can multisample
-   * half-float render targets 4 times (some can't), 0 otherwise.
-   */
-  const getHalfFloatRenderTargetSamples = (
-    threeRenderer: THREE.WebGLRenderer
-  ): integer => {
-    const gl = threeRenderer.getContext();
-    const contextAttributes = gl.getContextAttributes();
-    if (
-      !contextAttributes ||
-      !contextAttributes.antialias ||
-      typeof WebGL2RenderingContext === 'undefined' ||
-      !(gl instanceof WebGL2RenderingContext)
-    ) {
-      return 0;
-    }
-    const supportedSamples: Int32Array | null = gl.getInternalformatParameter(
-      gl.RENDERBUFFER,
-      gl.RGBA16F,
-      gl.SAMPLES
-    );
-    return supportedSamples && supportedSamples.includes(4) ? 4 : 0;
-  };
-
   const FRUSTUM_EDGES: Array<[number, number]> = [
     // near plane edges
     [0, 1],
@@ -251,18 +221,8 @@ namespace gdjs {
       | THREE.OrthographicCamera
       | null = null;
     private _threeCameraDirty: boolean = false;
-    private _threeEffectComposer: THREE_ADDONS.EffectComposer | null = null;
-    private _threeRenderPass: THREE_ADDONS.RenderPass | null = null;
-    private _customRenderPass: THREE_ADDONS.N8AOPass | null = null;
-    private _sceneDepthRenderPass: THREE_ADDONS.SceneDepthRenderPass | null =
+    private _postProcessingPipeline: gdjs.IPostProcessingPipeline | null =
       null;
-    private _sceneDepthTextureUsersCount = 0;
-    private _postProcessingPasses: PostProcessingPass[] = [];
-    // The antialiasing (if any) and output passes, after the effects.
-    private _threeFinalPasses: THREE_ADDONS.Pass[] = [];
-    // The multisampling of the render target in which the scene is rendered
-    // with post-processing, like the canvas, so that effects keep its antialiasing.
-    private _renderTargetSamples = 0;
     private _basis: Basis | null = null;
     private static matrix4: THREE.Matrix4 | null = null;
 
@@ -423,64 +383,72 @@ namespace gdjs {
       return this._threeCamera;
     }
 
+    /**
+     * Get the underlying WebGL `EffectComposer`, when the WebGL backend is
+     * used. Prefer `getPostProcessingPipeline()` for backend-agnostic code.
+     */
     getThreeEffectComposer(): THREE_ADDONS.EffectComposer | null {
-      return this._threeEffectComposer;
+      if (
+        !this._postProcessingPipeline ||
+        this._postProcessingPipeline.getBackendType() !== 'webgl'
+      ) {
+        return null;
+      }
+      return this._postProcessingPipeline.getUnderlyingPipeline() as THREE_ADDONS.EffectComposer;
+    }
+
+    /**
+     * Get the backend-agnostic post-processing pipeline of this layer (WebGL
+     * `EffectComposer` or WebGPU `RenderPipeline`), if any.
+     */
+    getPostProcessingPipeline(): gdjs.IPostProcessingPipeline | null {
+      return this._postProcessingPipeline;
     }
 
     /**
      * Add a pass applying an effect after the rendering of the scene.
      * Passes are applied in the order of the effects of the layer.
+     * The pass may be a WebGL `THREE_ADDONS.Pass` or a
+     * `WebGPUPostProcessingPass`; the active pipeline keeps the one matching
+     * its backend and ignores the other.
      * @param pass The pass to add.
      * @param effectName The name of the effect adding the pass.
      */
-    addPostProcessingPass(pass: THREE_ADDONS.Pass, effectName: string) {
-      if (!this._threeEffectComposer) {
+    addPostProcessingPass(
+      pass: gdjs.AnyPostProcessingPass,
+      effectName: string
+    ) {
+      if (!this._postProcessingPipeline) {
         return;
       }
-      const renderTarget = this._threeEffectComposer.renderTarget1;
-      pass.setSize(renderTarget.width, renderTarget.height);
-      this._postProcessingPasses.push({ pass, effectName });
+      this._postProcessingPipeline.addPass(pass, effectName);
       this.updatePostProcessingPassesOrder();
-      this._updateSceneRenderPass();
     }
 
-    removePostProcessingPass(pass: THREE_ADDONS.Pass) {
-      this._postProcessingPasses = this._postProcessingPasses.filter(
-        (postProcessingPass) => postProcessingPass.pass !== pass
-      );
+    removePostProcessingPass(pass: gdjs.AnyPostProcessingPass) {
+      if (!this._postProcessingPipeline) {
+        return;
+      }
+      this._postProcessingPipeline.removePass(pass);
       this.updatePostProcessingPassesOrder();
-      this._updateSceneRenderPass();
     }
 
     /**
      * Put the post-processing passes in the order of the effects of the layer.
      */
     updatePostProcessingPassesOrder() {
-      if (!this._threeEffectComposer) {
+      if (!this._postProcessingPipeline) {
         return;
       }
-      const effectNames = Object.keys(this._layer.getRendererEffects());
-      this._postProcessingPasses.sort(
-        (a, b) =>
-          effectNames.indexOf(a.effectName) - effectNames.indexOf(b.effectName)
-      );
-
-      const passes = this._threeEffectComposer.passes;
-      passes.splice(
-        1,
-        passes.length - 1,
-        ...this._postProcessingPasses.map(({ pass }) => pass),
-        ...this._threeFinalPasses
+      this._postProcessingPipeline.setPassesOrder(
+        Object.keys(this._layer.getRendererEffects())
       );
     }
 
     hasPostProcessingPass() {
-      if (!this._threeEffectComposer) {
-        return false;
-      }
       return (
-        this._threeEffectComposer.passes[0] !== this._threeRenderPass ||
-        this._postProcessingPasses.length > 0
+        !!this._postProcessingPipeline &&
+        this._postProcessingPipeline.hasPasses()
       );
     }
 
@@ -488,9 +456,11 @@ namespace gdjs {
      * Replace the pass rendering the scene to compute the ambient occlusion.
      * @param pass The pass rendering the scene, or null to use the default one.
      */
-    setCustomRenderPass(pass: THREE_ADDONS.N8AOPass | null) {
-      this._customRenderPass = pass;
-      this._updateSceneRenderPass();
+    setCustomRenderPass(pass: gdjs.AnyPostProcessingPass | null) {
+      if (!this._postProcessingPipeline) {
+        return;
+      }
+      this._postProcessingPipeline.setCustomRenderPass(pass);
     }
 
     /**
@@ -498,11 +468,10 @@ namespace gdjs {
      * `getSceneDepthTexture`), or doesn't need it anymore.
      */
     setSceneDepthTextureNeeded(isNeeded: boolean) {
-      this._sceneDepthTextureUsersCount = Math.max(
-        0,
-        this._sceneDepthTextureUsersCount + (isNeeded ? 1 : -1)
-      );
-      this._updateSceneRenderPass();
+      if (!this._postProcessingPipeline) {
+        return;
+      }
+      this._postProcessingPipeline.setSceneDepthTextureNeeded(isNeeded);
     }
 
     /**
@@ -510,69 +479,21 @@ namespace gdjs {
      * declared it needed it with `setSceneDepthTextureNeeded`.
      */
     getSceneDepthTexture(): THREE.DepthTexture | null {
-      if (this._customRenderPass) {
-        return this._customRenderPass.beautyRenderTarget.depthTexture;
-      }
-      if (this._sceneDepthTextureUsersCount > 0 && this._sceneDepthRenderPass) {
-        return this._sceneDepthRenderPass.depthTexture;
-      }
-      return null;
+      return this._postProcessingPipeline
+        ? this._postProcessingPipeline.getSceneDepthTexture()
+        : null;
     }
 
-    private _updateSceneRenderPass() {
-      if (
-        !this._threeEffectComposer ||
-        !this._threeRenderPass ||
-        !this._threeScene ||
-        !this._threeCamera
-      ) {
+    /**
+     * Render the post-processing pipeline (scene + effects) on the target.
+     * Backend-agnostic: it uses the WebGL `EffectComposer` or the WebGPU
+     * `RenderPipeline` depending on the active backend.
+     */
+    renderPostProcessing() {
+      if (!this._postProcessingPipeline) {
         return;
       }
-      let sceneRenderPass: THREE_ADDONS.Pass = this._threeRenderPass;
-      // To keep the antialiasing of the canvas, the scene is rendered in a
-      // multisampled render target owned by a pass. The render targets of the
-      // composer are only written by full-screen passes: multisampling them
-      // would resolve them after each effect.
-      if (this._customRenderPass) {
-        sceneRenderPass = this._customRenderPass;
-        this._setRenderTargetSamples(this._customRenderPass.beautyRenderTarget);
-      } else if (
-        this._sceneDepthTextureUsersCount > 0 ||
-        (this._renderTargetSamples > 0 && this._postProcessingPasses.length > 0)
-      ) {
-        if (!this._sceneDepthRenderPass) {
-          this._sceneDepthRenderPass = new THREE_ADDONS.SceneDepthRenderPass(
-            this._threeScene,
-            this._threeCamera
-          );
-        }
-        sceneRenderPass = this._sceneDepthRenderPass;
-        this._setRenderTargetSamples(this._sceneDepthRenderPass.renderTarget);
-        // The depth is only copied from the samples when an effect reads it.
-        this._sceneDepthRenderPass.renderTarget.resolveDepthBuffer =
-          this._sceneDepthTextureUsersCount > 0;
-      }
-      const previousSceneRenderPass = this._threeEffectComposer.passes[0];
-      if (previousSceneRenderPass === sceneRenderPass) {
-        return;
-      }
-      if (previousSceneRenderPass === this._sceneDepthRenderPass) {
-        // Free the render target until the pass is used again.
-        this._sceneDepthRenderPass.renderTarget.dispose();
-      }
-      // The pass was not resized with the composer while it was not in it.
-      const renderTarget = this._threeEffectComposer.renderTarget1;
-      sceneRenderPass.setSize(renderTarget.width, renderTarget.height);
-      this._threeEffectComposer.passes[0] = sceneRenderPass;
-    }
-
-    private _setRenderTargetSamples(renderTarget: THREE.WebGLRenderTarget) {
-      if (renderTarget.samples === this._renderTargetSamples) {
-        return;
-      }
-      renderTarget.samples = this._renderTargetSamples;
-      // Recreate the WebGL buffers with the new number of samples.
-      renderTarget.dispose();
+      this._postProcessingPipeline.render();
     }
 
     /**
@@ -639,56 +560,29 @@ namespace gdjs {
           this.updateWorldScale();
 
           const game = this._layer.getRuntimeScene().getGame();
-          const threeRenderer = game.getRenderer().getThreeRenderer();
+          const gameRenderer = game.getRenderer();
+          const threeRenderer = gameRenderer.getThreeRenderer();
           if (threeRenderer) {
-            // Keep a stencil buffer when the layer is rendered through
-            // post-processing passes, like when it's rendered on the canvas.
-            const drawingBufferSize = threeRenderer.getDrawingBufferSize(
-              new THREE.Vector2()
-            );
-            this._renderTargetSamples =
-              getHalfFloatRenderTargetSamples(threeRenderer);
-            this._threeEffectComposer = new THREE_ADDONS.EffectComposer(
-              threeRenderer,
-              new THREE.WebGLRenderTarget(
-                drawingBufferSize.x,
-                drawingBufferSize.y,
-                { type: THREE.HalfFloatType, stencilBuffer: true }
-              )
-            );
-            this._threeRenderPass = new THREE_ADDONS.RenderPass(
-              this._threeScene,
-              this._threeCamera
-            );
-            this._threeEffectComposer.addPass(this._threeRenderPass);
-            // SMAA can't smooth thin details (like grass): it's only used
-            // when the canvas is not multisampled (on mobile, if disabled).
-            if (
-              game.getAntialiasingMode() !== 'none' &&
-              this._renderTargetSamples === 0
-            ) {
-              this._threeFinalPasses.push(new THREE_ADDONS.SMAAPass());
-            }
-            const outputPass = new THREE_ADDONS.OutputPass();
-            // The composer result is drawn on top of the layers already rendered
-            // on the canvas: blend it (the buffers hold premultiplied colors)
-            // instead of overwriting everything.
-            outputPass.material.transparent = true;
-            outputPass.material.depthTest = false;
-            outputPass.material.depthWrite = false;
-            outputPass.material.blending = THREE.CustomBlending;
-            outputPass.material.blendEquation = THREE.AddEquation;
-            outputPass.material.blendSrc = THREE.OneFactor;
-            outputPass.material.blendDst = THREE.OneMinusSrcAlphaFactor;
-            // TODO: the composer blends transparency in linear space, unlike
-            // rendering without post-processing (in sRGB space), and the output
-            // pass converts premultiplied colors to sRGB. So semi-transparent
-            // pixels can be brighter than without effects, especially over
-            // the layers below. Fixing this needs a decision on which blending
-            // to match, keeping the light added by a bloom on transparent pixels.
-            this._threeFinalPasses.push(outputPass);
-            for (const pass of this._threeFinalPasses) {
-              this._threeEffectComposer.addPass(pass);
+            // WebGL backend: post-processing is done with an `EffectComposer`
+            // and GLSL passes.
+            this._postProcessingPipeline =
+              new gdjs.WebGLPostProcessingPipeline({
+                threeRenderer,
+                scene: this._threeScene,
+                camera: this._threeCamera,
+                antialiasingMode: game.getAntialiasingMode(),
+              });
+          } else {
+            // WebGPU backend: post-processing is done with a `RenderPipeline`
+            // and TSL nodes.
+            const webGPURenderer = gameRenderer.getWebGPURenderer();
+            if (webGPURenderer) {
+              this._postProcessingPipeline =
+                new gdjs.WebGPUPostProcessingPipeline({
+                  renderer: webGPURenderer,
+                  scene: this._threeScene,
+                  camera: this._threeCamera,
+                });
             }
           }
 
@@ -1295,9 +1189,9 @@ namespace gdjs {
     }
 
     updateResolution() {
-      if (this._threeEffectComposer) {
+      if (this._postProcessingPipeline) {
         const game = this._layer.getRuntimeScene().getGame();
-        this._threeEffectComposer.setSize(
+        this._postProcessingPipeline.setSize(
           game.getGameResolutionWidth(),
           game.getGameResolutionHeight()
         );

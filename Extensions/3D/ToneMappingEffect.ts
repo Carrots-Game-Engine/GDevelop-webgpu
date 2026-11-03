@@ -15,6 +15,27 @@ namespace gdjs {
   const isToneMappingMode = (mode: string): mode is ToneMappingMode =>
     toneMappingFunctions.hasOwnProperty(mode);
 
+  /**
+   * The Three.js tone mapping constant matching a GDevelop tone mapping mode.
+   * Read at call time because `THREE` may be either the WebGL or the WebGPU
+   * bundle (the WebGPU one is required for the TSL tone mapping node).
+   */
+  const getThreeToneMapping = (mode: ToneMappingMode): number => {
+    switch (mode) {
+      case 'ACESFilmic':
+        return THREE.ACESFilmicToneMapping;
+      case 'AgX':
+        return THREE.AgXToneMapping;
+      case 'Reinhard':
+        return THREE.ReinhardToneMapping;
+      case 'Cineon':
+        return THREE.CineonToneMapping;
+      case 'Neutral':
+      default:
+        return THREE.NeutralToneMapping;
+    }
+  };
+
   const toneMappingShader = {
     defines: {
       TONE_MAPPING_FUNCTION: toneMappingFunctions.Neutral,
@@ -59,9 +80,36 @@ namespace gdjs {
           shaderPass: THREE_ADDONS.ShaderPass;
           _isEnabled: boolean = false;
           _mode: ToneMappingMode = 'Neutral';
+          /** The current target, needed to rebuild the WebGPU pass on mode change. */
+          _target: EffectsTarget | null = null;
+          /** The WebGPU (TSL) equivalent of the shader pass, when available. */
+          _webGPUPass: gdjs.WebGPUPostProcessingPass | null = null;
+          /** TSL uniform holding the exposure, so it can be updated without rebuilding. */
+          _webGPUExposureUniform: any = null;
 
           constructor() {
             this.shaderPass = new THREE_ADDONS.ShaderPass(toneMappingShader);
+
+            // Build the WebGPU (TSL) pass too, when the WebGPU bundle is
+            // loaded (`THREE.TSL` only exists there). The WebGL pipeline
+            // ignores it and the WebGPU pipeline ignores the shader pass, so
+            // both backends are covered by registering both.
+            const threeApi = THREE as any;
+            if (
+              threeApi.TSL &&
+              typeof threeApi.TSL.uniform === 'function'
+            ) {
+              this._webGPUExposureUniform = threeApi.TSL.uniform(
+                this.shaderPass.uniforms.exposure.value
+              );
+              this._webGPUPass = {
+                getOutputNode: (inputNode: any) =>
+                  inputNode.toneMapping(
+                    getThreeToneMapping(this._mode),
+                    this._webGPUExposureUniform
+                  ),
+              };
+            }
           }
 
           isEnabled(target: EffectsTarget): boolean {
@@ -81,9 +129,18 @@ namespace gdjs {
             if (!(target instanceof gdjs.Layer)) {
               return false;
             }
-            target
-              .getRenderer()
-              .addPostProcessingPass(this.shaderPass, effectData.name);
+            this._target = target;
+            const layerRenderer = target.getRenderer();
+            layerRenderer.addPostProcessingPass(
+              this.shaderPass,
+              effectData.name
+            );
+            if (this._webGPUPass) {
+              layerRenderer.addPostProcessingPass(
+                this._webGPUPass,
+                effectData.name
+              );
+            }
             this._isEnabled = true;
             return true;
           }
@@ -91,14 +148,23 @@ namespace gdjs {
             if (!(target instanceof gdjs.Layer)) {
               return false;
             }
-            target.getRenderer().removePostProcessingPass(this.shaderPass);
+            this._target = null;
+            const layerRenderer = target.getRenderer();
+            layerRenderer.removePostProcessingPass(this.shaderPass);
+            if (this._webGPUPass) {
+              layerRenderer.removePostProcessingPass(this._webGPUPass);
+            }
             this._isEnabled = false;
             return true;
           }
           updatePreRender(target: gdjs.EffectsTarget): any {}
           updateDoubleParameter(parameterName: string, value: number): void {
             if (parameterName === 'exposure') {
-              this.shaderPass.uniforms.exposure.value = Math.max(0, value);
+              const exposure = Math.max(0, value);
+              this.shaderPass.uniforms.exposure.value = exposure;
+              if (this._webGPUExposureUniform) {
+                this._webGPUExposureUniform.value = exposure;
+              }
             }
           }
           getDoubleParameter(parameterName: string): number {
@@ -117,9 +183,20 @@ namespace gdjs {
               return;
             }
             this._mode = mode;
+            // WebGL: the tone mapping function is a GLSL define.
             this.shaderPass.material.defines.TONE_MAPPING_FUNCTION =
               toneMappingFunctions[this._mode];
             this.shaderPass.material.needsUpdate = true;
+            // WebGPU: the tone mapping mode is baked in the TSL node, so the
+            // node chain must be rebuilt by re-registering the pass.
+            if (this._webGPUPass && this._target instanceof gdjs.Layer) {
+              const layerRenderer = this._target.getRenderer();
+              layerRenderer.removePostProcessingPass(this._webGPUPass);
+              layerRenderer.addPostProcessingPass(
+                this._webGPUPass,
+                effectData.name
+              );
+            }
           }
           updateColorParameter(parameterName: string, value: number): void {}
           getColorParameter(parameterName: string): number {
@@ -134,7 +211,7 @@ namespace gdjs {
           }
           updateFromNetworkSyncData(data: ToneMappingFilterNetworkSyncData) {
             this._setMode(data.m);
-            this.shaderPass.uniforms.exposure.value = data.e;
+            this.updateDoubleParameter('exposure', data.e);
           }
         })();
       }

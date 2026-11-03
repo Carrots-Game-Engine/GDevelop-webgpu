@@ -106,16 +106,26 @@ namespace gdjs {
         initializeRenderers(gameCanvas: HTMLCanvasElement): void {
       this._throwIfDisposed();
 
-      // Check WebGL2 support on a separate canvas: getting a context on the game
-      // canvas would make the browser ignore the context attributes asked
-      // later by Three.js (antialias, preserveDrawingBuffer...).
+      // Create the Three.js renderer adapter whenever Three.js is available.
+      //
+      // The backend decides what it needs:
+      // - WebGL needs a WebGL2 context. Support is checked on a separate canvas
+      //   so that getting a context on the game canvas does not make the browser
+      //   ignore the context attributes asked later by Three.js (antialias,
+      //   preserveDrawingBuffer...). The result is cached to avoid leaking one
+      //   throwaway WebGL2 context on every renderer re-initialization (the
+      //   in-game editor restarts its renderer regularly).
+      // - WebGPU does NOT depend on WebGL2 at all. Gating it behind a WebGL2
+      //   probe made the 3D editor report "could not start" on devices where the
+      //   probe failed even though WebGPU was available. When `three-webgpu.js`
+      //   was not loaded (or `THREE.WebGPURenderer` is missing), the adapter
+      //   transparently falls back to the WebGL backend, which needs WebGL2.
+      const requestedBackend = this._game.getThreeBackend();
       if (
         typeof THREE !== 'undefined' &&
-        document.createElement('canvas').getContext('webgl2')
+        this._isThreeBackendUsable(requestedBackend)
       ) {
-        const adapter = new gdjs.ThreeRendererAdapter(
-          this._game.getThreeBackend()
-        );
+        const adapter = new gdjs.ThreeRendererAdapter(requestedBackend);
         const isWebGPU = adapter.getBackendType() === 'webgpu';
 
         // A canvas holds a single context type: Pixi (WebGL) keeps `gameCanvas`,
@@ -144,26 +154,27 @@ namespace gdjs {
         if (ok) {
           this._threeAdapter = adapter;
           if (isWebGPU) this._threeCanvas = threeCanvas;
+          // WebGPU GPU acquisition is asynchronous: keep the adapter (so 3D is
+          // reported as available and resize/dispose keep working) and only fall
+          // back to WebGL if the device could not be acquired at all.
           adapter.initAsync().catch((err) => {
             logger.error('ThreeRendererAdapter.initAsync() failed:', err);
-            try {
-              // Reload loop guard: only when this session really is webgpu.
-              const currentBackend =
-                (window as any).__gdThreeBackend || 'webgl';
-              if (currentBackend === 'webgpu') {
-                const params = new URLSearchParams(window.location.search);
-                params.set('threeBackend', 'webgl');
-                window.location.replace(
-                  window.location.pathname + '?' + params.toString()
-                );
-              }
-            } catch (navErr) {
-              logger.warn('Could not redirect to WebGL fallback:', navErr);
-            }
+            this._fallbackToWebGL('WebGPU device initialization failed');
           });
         } else {
           if (isWebGPU) threeCanvas.parentNode?.removeChild(threeCanvas);
           this._threeAdapter = null;
+          logger.error(
+            'Three.js renderer could not be created for backend "' +
+              requestedBackend +
+              '".'
+          );
+          // Do not leave the 3D editor/3D layers permanently unavailable: if the
+          // failed backend was WebGPU, reload once requesting WebGL instead.
+          // A plain WebGL failure keeps the existing "2D only" behaviour.
+          if (isWebGPU) {
+            this._fallbackToWebGL('ThreeRendererAdapter.init() failed');
+          }
         }
       }
 
@@ -204,6 +215,86 @@ namespace gdjs {
       // See https://github.com/pixijs/pixijs/issues/5111#issuecomment-420047824
       this._pixiRenderer.plugins.accessibility.destroy();
       delete this._pixiRenderer.plugins.accessibility;
+    }
+
+    /**
+     * Whether the requested Three.js backend has a chance to work on this
+     * device.
+     *
+     * - WebGPU only needs `THREE.WebGPURenderer` (which ships with
+     *   `three-webgpu.js`). It must NOT require WebGL2.
+     * - The WebGL backend (used directly, or as the adapter fallback when
+     *   WebGPU is unavailable) requires WebGL2.
+     */
+    private _isThreeBackendUsable(
+      requestedBackend: 'webgl' | 'webgpu'
+    ): boolean {
+      if (
+        requestedBackend === 'webgpu' &&
+        typeof (THREE as any).WebGPURenderer === 'function'
+      ) {
+        return true;
+      }
+      return gdjs.RuntimeGamePixiRenderer.isWebGL2Supported();
+    }
+
+    /**
+     * Reload the page once, requesting the WebGL backend. Used as a safe
+     * fallback when WebGPU could not be initialized, so that the game (and the
+     * 3D editor) stays usable instead of showing a hard failure.
+     *
+     * Guarded against reload loops: only triggered when this session is
+     * actually running with the WebGPU backend.
+     */
+    private _fallbackToWebGL(reason: string): void {
+      try {
+        const currentBackend =
+          typeof window !== 'undefined'
+            ? (window as any).__gdThreeBackend || 'webgl'
+            : 'webgl';
+        if (currentBackend !== 'webgpu') {
+          logger.warn(
+            'Three.js WebGPU backend failed (' +
+              reason +
+              '), but this session is not running WebGPU: no fallback reload.'
+          );
+          return;
+        }
+        logger.warn(
+          'Three.js WebGPU backend failed (' +
+            reason +
+            '): reloading with the WebGL backend.'
+        );
+        const params = new URLSearchParams(window.location.search);
+        params.set('threeBackend', 'webgl');
+        window.location.replace(
+          window.location.pathname + '?' + params.toString()
+        );
+      } catch (navErr) {
+        logger.warn('Could not redirect to WebGL fallback:', navErr);
+      }
+    }
+
+    /** Cached result of the WebGL2 support probe (see `initializeRenderers`). */
+    static _cachedWebGL2Support: boolean | null = null;
+
+    /**
+     * Check once whether a WebGL2 context can be created. Cached so that
+     * repeated renderer initializations (in-game editor restarts/hot reloads)
+     * do not create and leak throwaway WebGL2 contexts.
+     */
+    static isWebGL2Supported(): boolean {
+      if (gdjs.RuntimeGamePixiRenderer._cachedWebGL2Support !== null) {
+        return gdjs.RuntimeGamePixiRenderer._cachedWebGL2Support;
+      }
+      let supported = false;
+      try {
+        supported = !!document.createElement('canvas').getContext('webgl2');
+      } catch (error) {
+        supported = false;
+      }
+      gdjs.RuntimeGamePixiRenderer._cachedWebGL2Support = supported;
+      return supported;
     }
 
     /**
@@ -1085,6 +1176,14 @@ namespace gdjs {
      */
     getThreeRenderer(): THREE.WebGLRenderer | null {
       return this._threeAdapter ? this._threeAdapter.getThreeRenderer() : null;
+    }
+
+    /**
+     * Get the Three.js WebGPU renderer for the game - if any.
+     * Returns null when the WebGL backend (or no backend) is active.
+     */
+    getWebGPURenderer() {
+      return this._threeAdapter ? this._threeAdapter.getWebGPURenderer() : null;
     }
 
     /**

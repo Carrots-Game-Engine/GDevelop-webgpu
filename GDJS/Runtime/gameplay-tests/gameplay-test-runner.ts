@@ -4092,12 +4092,12 @@ namespace gdjs {
           .getCurrentScene();
         const layerNames: Array<string> = [];
         if (currentScene) currentScene.getAllLayerNames(layerNames);
-        const effectComposers = layerNames.map((layerName) =>
+        const postProcessingPipelines = layerNames.map((layerName) =>
           currentScene
             ? currentScene
                 .getLayer(layerName)
                 .getRenderer()
-                .getThreeEffectComposer()
+                .getPostProcessingPipeline()
             : null
         );
         const setPixelRatio = (pixiResolution: float, threeRatio: float) => {
@@ -4106,8 +4106,8 @@ namespace gdjs {
             pixiRenderer.resize(gameWidth, gameHeight);
           }
           if (threeRenderer) threeRenderer.setPixelRatio(threeRatio);
-          for (const effectComposer of effectComposers) {
-            if (effectComposer) effectComposer.setPixelRatio(threeRatio);
+          for (const pipeline of postProcessingPipelines) {
+            if (pipeline) pipeline.setPixelRatio(threeRatio);
           }
         };
         const previousPixiResolution = pixiRenderer

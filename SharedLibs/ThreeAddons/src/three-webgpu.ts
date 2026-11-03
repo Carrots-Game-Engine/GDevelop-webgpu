@@ -16,6 +16,10 @@
  * `index.html` that reads the game's `threeBackend` setting. When this bundle
  * runs first, `three.js` (still listed in GDJS_CODE_FILES) detects
  * `THREE.WebGPURenderer` and skips its own body.
+ *
+ * The TSL display post-processing nodes (`THREE.bloom`, `THREE.dof`,
+ * `THREE.ao`, `THREE.smaa`, ...) are bundled too: see `./tsl-display`.
  */
 
 export * from "three/webgpu";
+export * from './tsl-display';

@@ -467,11 +467,17 @@ namespace gdjs {
         this._profiler.end('render');
       }
       if (this._profiler) {
-        const threeRenderer = this._runtimeGame
-          .getRenderer()
-          .getThreeRenderer();
+        const gameRenderer = this._runtimeGame.getRenderer();
+        const threeRenderer = gameRenderer.getThreeRenderer();
         if (threeRenderer) {
           this._profiler.record3DRendererInfo(threeRenderer.info);
+        } else {
+          // WebGPU backend: `getThreeRenderer()` is null, read the info from
+          // the WebGPU renderer instead.
+          const webGPURenderer = gameRenderer.getWebGPURenderer();
+          if (webGPURenderer) {
+            this._profiler.record3DRendererInfo(webGPURenderer.info);
+          }
         }
       }
       if (this._profiler) {

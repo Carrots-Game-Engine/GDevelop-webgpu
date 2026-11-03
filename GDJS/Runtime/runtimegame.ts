@@ -2152,6 +2152,10 @@ namespace gdjs {
         return false;
       }
             this._renderer.shadowMap.enabled = true;
+      // Use the same shadow filtering as the WebGL backend so 3D lighting
+      // looks consistent across backends. `PCFShadowMap` (type 1) is
+      // supported by Three.js' WebGPU `ShadowNode`.
+      this._renderer.shadowMap.type = THREE.PCFShadowMap;
       this._renderer.autoClear = false;
       // setSize() must wait for `await renderer.init()`: see initAsync().
       return true;
