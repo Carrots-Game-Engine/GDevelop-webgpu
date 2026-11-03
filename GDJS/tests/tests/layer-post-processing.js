@@ -77,6 +77,13 @@ describe('gdjs.LayerPixiRenderer (3D post-processing)', () => {
     'Scene3D::BrightnessAndContrast',
     { brightness: 0, contrast: -0.5 }
   );
+  const toneMappingEffectData = {
+    name: 'ToneMapping',
+    effectType: 'Scene3D::ToneMapping',
+    stringParameters: { mode: 'Neutral' },
+    booleanParameters: {},
+    doubleParameters: { exposure: 1 },
+  };
 
   /**
    * Add a flat colored quad, positioned in "game coordinates", to the 3D
@@ -211,6 +218,41 @@ describe('gdjs.LayerPixiRenderer (3D post-processing)', () => {
       expect(readPixel(runtimeGame, 200, 300)).to.eql([255, 0, 0]);
       expect(readPixel(runtimeGame, 600, 300)).to.eql([0, 0, 255]);
     });
+  });
+
+  it('applies the tone mapping of a layer and lets it change at runtime', () => {
+    const runtimeScene = makeSceneWithOverlappingQuads();
+    const topLayer = runtimeScene.getLayer('Top');
+    topLayer.addEffect(toneMappingEffectData);
+
+    runtimeScene.renderAndStep(1000 / 60);
+
+    // The tone mapping is applied only to the layer it's on.
+    expect(readPixel(runtimeGame, 100, 100)).to.eql([33, 241, 33]);
+    expect(readPixel(runtimeGame, 200, 300)).to.eql([255, 0, 0]);
+    expect(readPixel(runtimeGame, 600, 300)).to.eql([0, 0, 255]);
+
+    // Changing the exposure and the mode takes effect on the next frames.
+    topLayer.setEffectDoubleParameter('ToneMapping', 'exposure', 3);
+    runtimeScene.renderAndStep(1000 / 60);
+    expect(readPixel(runtimeGame, 100, 100)).to.eql([131, 252, 131]);
+
+    topLayer.setEffectStringParameter('ToneMapping', 'mode', 'ACESFilmic');
+    runtimeScene.renderAndStep(1000 / 60);
+    expect(readPixel(runtimeGame, 100, 100)).to.eql([221, 248, 178]);
+  });
+
+  it('applies a tone mapping added after the first rendered frame', () => {
+    // Guards against post-processing pipelines that only build their pass
+    // chain once, at construction (the WebGPU `RenderPipeline` notably needs
+    // its `needsUpdate` flag set when the output node changes).
+    const runtimeScene = makeSceneWithOverlappingQuads();
+    runtimeScene.renderAndStep(1000 / 60);
+    expect(readPixel(runtimeGame, 100, 100)).to.eql([0, 255, 0]);
+
+    runtimeScene.getLayer('Top').addEffect(toneMappingEffectData);
+    runtimeScene.renderAndStep(1000 / 60);
+    expect(readPixel(runtimeGame, 100, 100)).to.eql([33, 241, 33]);
   });
 
   it('keeps the background of a layer below visible when a layer has a bloom', () => {

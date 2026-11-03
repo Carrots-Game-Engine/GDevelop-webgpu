@@ -19,6 +19,15 @@ namespace gdjs {
         return new (class implements gdjs.PixiFiltersTools.Filter {
           shaderPass: THREE_ADDONS.DepthOfFieldPass;
           _isEnabled: boolean = false;
+          _webGPUPass: gdjs.WebGPUPostProcessingPass | null = null;
+          _webGPUDofNode: any = null;
+          _webGPUFocusDistance: any = null;
+          _webGPUFocusRange: any = null;
+          _webGPUTransitionDistance: any = null;
+          _webGPUMaxBlur: any = null;
+          _webGPUWidth: number = Math.max(1, target.getWidth());
+          _webGPUHeight: number = Math.max(1, target.getHeight());
+          _layerRenderer: gdjs.LayerRenderer | null = null;
           // Distances are in scene units: they are converted to the Three.js
           // world units before each rendering, as the world scale can change.
           _focusDistance: float = 500;
@@ -29,6 +38,83 @@ namespace gdjs {
 
           constructor() {
             this.shaderPass = new THREE_ADDONS.DepthOfFieldPass();
+
+            const threeApi = THREE as any;
+            const tsl = threeApi.TSL;
+            if (
+              tsl &&
+              typeof threeApi.dof === 'function' &&
+              typeof tsl.uniform === 'function'
+            ) {
+              this._webGPUFocusDistance = tsl.uniform(this._focusDistance);
+              this._webGPUFocusRange = tsl.uniform(this._focusRange);
+              this._webGPUTransitionDistance = tsl.uniform(
+                this._transitionDistance
+              );
+              this._webGPUMaxBlur = tsl.uniform(this._maxBlur);
+              this._webGPUPass = {
+                getOutputNode: (inputNode: any) => {
+                  const layerRenderer = this._layerRenderer;
+                  const camera = layerRenderer?.getThreeCamera();
+                  const depthNode = layerRenderer?.getSceneDepthNode();
+                  if (!camera || !depthNode) return inputNode;
+
+                  if (!inputNode.value?.image) {
+                    // The built-in TSL DOF node uses the source image size to
+                    // allocate its internal render targets. Supply dimensions
+                    // when the input is an expression from an earlier effect.
+                    inputNode.value = {
+                      image: {
+                        width: this._webGPUWidth,
+                        height: this._webGPUHeight,
+                      },
+                    };
+                  }
+                  const depth = depthNode.r;
+                  const viewZ =
+                    camera instanceof THREE.PerspectiveCamera
+                      ? tsl.perspectiveDepthToViewZ(
+                          depth,
+                          camera.near,
+                          camera.far
+                        )
+                      : tsl.orthographicDepthToViewZ(
+                          depth,
+                          camera.near,
+                          camera.far
+                        );
+                  const distanceFromFocus = viewZ
+                    .negate()
+                    .sub(this._webGPUFocusDistance);
+                  const signedBlurDistance = distanceFromFocus
+                    .abs()
+                    .sub(this._webGPUFocusRange.mul(0.5))
+                    .max(0)
+                    .mul(distanceFromFocus.greaterThanEqual(0).select(1, -1));
+                  // Preserve the existing focus dead-zone, transition distance,
+                  // and pixel-based maximum blur while using Three.js' TSL DOF
+                  // node (which performs its own near/far bokeh passes).
+                  const dofViewZ = signedBlurDistance.negate();
+                  if (!this._webGPUDofNode) {
+                    this._webGPUDofNode = threeApi.dof(
+                      inputNode,
+                      dofViewZ,
+                      0,
+                      this._webGPUTransitionDistance,
+                      this._webGPUMaxBlur
+                    );
+                  } else {
+                    this._webGPUDofNode.textureNode = inputNode;
+                    this._webGPUDofNode.viewZNode = dofViewZ;
+                  }
+                  return tsl.vec4(this._webGPUDofNode.rgb, inputNode.a);
+                },
+                dispose: () => {
+                  this._webGPUDofNode?.dispose?.();
+                  this._webGPUDofNode = null;
+                },
+              };
+            }
           }
 
           isEnabled(target: EffectsTarget): boolean {
@@ -53,11 +139,20 @@ namespace gdjs {
               return true;
             }
             const layerRenderer = target.getRenderer();
+            this._layerRenderer = layerRenderer;
+            this._webGPUWidth = Math.max(1, target.getWidth());
+            this._webGPUHeight = Math.max(1, target.getHeight());
             layerRenderer.setSceneDepthTextureNeeded(true);
             layerRenderer.addPostProcessingPass(
               this.shaderPass,
               effectData.name
             );
+            if (this._webGPUPass) {
+              layerRenderer.addPostProcessingPass(
+                this._webGPUPass,
+                effectData.name
+              );
+            }
             this._isEnabled = true;
             return true;
           }
@@ -70,7 +165,11 @@ namespace gdjs {
             }
             const layerRenderer = target.getRenderer();
             layerRenderer.removePostProcessingPass(this.shaderPass);
+            if (this._webGPUPass) {
+              layerRenderer.removePostProcessingPass(this._webGPUPass);
+            }
             layerRenderer.setSceneDepthTextureNeeded(false);
+            this._layerRenderer = null;
             this._isEnabled = false;
             return true;
           }
@@ -78,33 +177,44 @@ namespace gdjs {
             if (!(target instanceof gdjs.Layer)) {
               return;
             }
+            this._webGPUWidth = Math.max(1, target.getWidth());
+            this._webGPUHeight = Math.max(1, target.getHeight());
             const layerRenderer = target.getRenderer();
             const camera = layerRenderer.getThreeCamera();
             const depthTexture = layerRenderer.getSceneDepthTexture();
             const uniforms = this.shaderPass.uniforms;
-            // Without the depth, the shader would blur everything.
+            // Without depth, the WebGL shader must not blur the whole image.
             this.shaderPass.enabled = !!camera && !!depthTexture;
-            if (!camera || !depthTexture) {
-              return;
+            if (camera && depthTexture) {
+              uniforms.tDepth.value = depthTexture;
+              uniforms.nearClip.value = camera.near;
+              uniforms.farClip.value = camera.far;
+              this.shaderPass.setPerspectiveCamera(
+                camera instanceof THREE.PerspectiveCamera
+              );
             }
-            uniforms.tDepth.value = depthTexture;
-            uniforms.nearClip.value = camera.near;
-            uniforms.farClip.value = camera.far;
-            this.shaderPass.setPerspectiveCamera(
-              camera instanceof THREE.PerspectiveCamera
-            );
+            if (!camera) return;
 
             const inverseWorldScale = target
               .getRuntimeScene()
               .getScene()
               .getRenderer3DInverseWorldScale();
-            uniforms.focusDistance.value =
-              this._focusDistance * inverseWorldScale;
-            uniforms.focusRange.value = this._focusRange * inverseWorldScale;
-            uniforms.transitionDistance.value = Math.max(
+            const focusDistance = this._focusDistance * inverseWorldScale;
+            const focusRange = this._focusRange * inverseWorldScale;
+            const transitionDistance = Math.max(
               0.0001,
               this._transitionDistance * inverseWorldScale
             );
+            uniforms.focusDistance.value = focusDistance;
+            uniforms.focusRange.value = focusRange;
+            uniforms.transitionDistance.value = transitionDistance;
+
+            if (this._webGPUFocusDistance) {
+              this._webGPUFocusDistance.value = focusDistance;
+              this._webGPUFocusRange.value = focusRange;
+              this._webGPUTransitionDistance.value = transitionDistance;
+              this._webGPUMaxBlur.value = this._maxBlur;
+            }
 
             const width = target.getWidth();
             const height = target.getHeight();

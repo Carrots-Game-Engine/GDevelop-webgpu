@@ -17,6 +17,13 @@ namespace gdjs {
         return new (class implements gdjs.PixiFiltersTools.Filter {
           shaderPass: THREE_ADDONS.LowResolutionBloomPass;
           _isEnabled: boolean;
+          _webGPUPass: gdjs.WebGPUPostProcessingPass | null = null;
+          _webGPUBloomNode: any = null;
+          _webGPUStrength: any = null;
+          _webGPURadius: any = null;
+          _webGPUThreshold: any = null;
+          _webGPUWidth: number = Math.max(1, target.getWidth());
+          _webGPUHeight: number = Math.max(1, target.getHeight());
 
           constructor() {
             this.shaderPass = new THREE_ADDONS.LowResolutionBloomPass(
@@ -37,6 +44,53 @@ namespace gdjs {
             blendMaterial.blendSrcAlpha = THREE.ZeroFactor;
             blendMaterial.blendDstAlpha = THREE.OneFactor;
             this._isEnabled = false;
+
+            const threeApi = THREE as any;
+            const tsl = threeApi.TSL;
+            if (
+              tsl &&
+              typeof threeApi.bloom === 'function' &&
+              typeof tsl.uniform === 'function'
+            ) {
+              this._webGPUStrength = tsl.uniform(this.shaderPass.strength);
+              this._webGPURadius = tsl.uniform(this.shaderPass.radius);
+              this._webGPUThreshold = tsl.uniform(this.shaderPass.threshold);
+              this._webGPUPass = {
+                getOutputNode: (inputNode: any) => {
+                  // Three.js' BloomNode uses the input texture's image size to
+                  // size its internal mip chain. For a composed TSL expression
+                  // there is no TextureNode.value, so provide that metadata.
+                  if (!inputNode.value?.image) {
+                    inputNode.value = {
+                      image: {
+                        width: this._webGPUWidth,
+                        height: this._webGPUHeight,
+                      },
+                    };
+                  }
+                  if (!this._webGPUBloomNode) {
+                    this._webGPUBloomNode = threeApi.bloom(
+                      inputNode,
+                      this._webGPUStrength,
+                      this._webGPURadius,
+                      this._webGPUThreshold
+                    );
+                  } else {
+                    this._webGPUBloomNode.inputNode = inputNode;
+                  }
+                  // The WebGL pass additively blends bloom into the layer but
+                  // preserves the layer alpha so lower layers stay visible.
+                  return tsl.vec4(
+                    inputNode.rgb.add(this._webGPUBloomNode.rgb),
+                    inputNode.a
+                  );
+                },
+                dispose: () => {
+                  this._webGPUBloomNode?.dispose?.();
+                  this._webGPUBloomNode = null;
+                },
+              };
+            }
           }
 
           isEnabled(target: EffectsTarget): boolean {
@@ -56,9 +110,17 @@ namespace gdjs {
             if (!(target instanceof gdjs.Layer)) {
               return false;
             }
-            target
-              .getRenderer()
-              .addPostProcessingPass(this.shaderPass, effectData.name);
+            const layerRenderer = target.getRenderer();
+            layerRenderer.addPostProcessingPass(
+              this.shaderPass,
+              effectData.name
+            );
+            if (this._webGPUPass) {
+              layerRenderer.addPostProcessingPass(
+                this._webGPUPass,
+                effectData.name
+              );
+            }
             this._isEnabled = true;
             return true;
           }
@@ -66,20 +128,30 @@ namespace gdjs {
             if (!(target instanceof gdjs.Layer)) {
               return false;
             }
-            target.getRenderer().removePostProcessingPass(this.shaderPass);
+            const layerRenderer = target.getRenderer();
+            layerRenderer.removePostProcessingPass(this.shaderPass);
+            if (this._webGPUPass) {
+              layerRenderer.removePostProcessingPass(this._webGPUPass);
+            }
             this._isEnabled = false;
             return true;
           }
-          updatePreRender(target: gdjs.EffectsTarget): any {}
+          updatePreRender(target: gdjs.EffectsTarget): any {
+            this._webGPUWidth = Math.max(1, target.getWidth());
+            this._webGPUHeight = Math.max(1, target.getHeight());
+          }
           updateDoubleParameter(parameterName: string, value: number): void {
             if (parameterName === 'strength') {
               this.shaderPass.strength = value;
+              if (this._webGPUStrength) this._webGPUStrength.value = value;
             }
             if (parameterName === 'radius') {
               this.shaderPass.radius = value;
+              if (this._webGPURadius) this._webGPURadius.value = value;
             }
             if (parameterName === 'threshold') {
               this.shaderPass.threshold = value;
+              if (this._webGPUThreshold) this._webGPUThreshold.value = value;
             }
           }
           getDoubleParameter(parameterName: string): number {
@@ -108,9 +180,9 @@ namespace gdjs {
             };
           }
           updateFromNetworkSyncData(data: BloomFilterNetworkSyncData) {
-            this.shaderPass.strength = data.s;
-            this.shaderPass.radius = data.r;
-            this.shaderPass.threshold = data.t;
+            this.updateDoubleParameter('strength', data.s);
+            this.updateDoubleParameter('radius', data.r);
+            this.updateDoubleParameter('threshold', data.t);
           }
         })();
       }

@@ -31,7 +31,48 @@ namespace gdjs {
     if (resourceData && !resourceData.smoothed) {
       threeTexture.magFilter = THREE.NearestFilter;
       threeTexture.minFilter = THREE.NearestFilter;
+      // Pixel-art textures must stay crisp: mipmaps would blend their pixels
+      // together. Keep the previous behavior for them.
+      threeTexture.generateMipmaps = false;
     }
+  };
+
+  /**
+   * The maximum anisotropic filtering level supported by the active backend.
+   *
+   * - WebGPU always reports 16 (the `maxSamplerAnisotropy` used by the
+   *   backend), and it's safe to read before the device is initialized.
+   * - WebGL reads it from the `EXT_texture_filter_anisotropic` extension
+   *   (0 when unsupported).
+   *
+   * Anisotropic filtering keeps textures sharp when seen at a grazing angle
+   * (floors, walls, roads) instead of blurring them.
+   */
+  const getMaxAnisotropy = (runtimeGame: gdjs.RuntimeGame): number => {
+    try {
+      const gameRenderer = runtimeGame.getRenderer();
+      const webGPURenderer: any = gameRenderer.getWebGPURenderer();
+      if (
+        webGPURenderer &&
+        typeof webGPURenderer.getMaxAnisotropy === 'function'
+      ) {
+        return webGPURenderer.getMaxAnisotropy();
+      }
+      const threeRenderer = gameRenderer.getThreeRenderer();
+      if (
+        threeRenderer &&
+        threeRenderer.capabilities &&
+        typeof threeRenderer.capabilities.getMaxAnisotropy === 'function'
+      ) {
+        return threeRenderer.capabilities.getMaxAnisotropy();
+      }
+    } catch (error) {
+      logger.warn(
+        'Unable to read the maximum texture anisotropy from the renderer:',
+        error
+      );
+    }
+    return 0;
   };
 
   const resourceKinds: Array<ResourceKind> = ['image', 'video'];
@@ -212,7 +253,17 @@ namespace gdjs {
 
       const threeTexture = new THREE.Texture(image);
       threeTexture.magFilter = THREE.LinearFilter;
-      threeTexture.minFilter = THREE.LinearFilter;
+      // Trilinear filtering on mipmaps: keeps textures sharp and removes the
+      // shimmering/aliasing that appears on textures seen at a distance or at
+      // a grazing angle (the previous `LinearFilter` only sampled mip level 0).
+      threeTexture.minFilter = THREE.LinearMipmapLinearFilter;
+      threeTexture.generateMipmaps = true;
+      // Anisotropic filtering (up to 16x on WebGPU): the GPU samples the best
+      // mip levels along the viewing angle, for much sharper ground/wall
+      // textures. `0` when the backend doesn't support it.
+      threeTexture.anisotropy = getMaxAnisotropy(
+        this._resourceLoader._runtimeGame
+      );
       threeTexture.wrapS = THREE.RepeatWrapping;
       threeTexture.wrapT = THREE.RepeatWrapping;
       threeTexture.colorSpace = THREE.SRGBColorSpace;
@@ -290,7 +341,13 @@ namespace gdjs {
       // The images also need to be mirrored horizontally by users.
 
       cubeTexture.magFilter = THREE.LinearFilter;
-      cubeTexture.minFilter = THREE.LinearFilter;
+      // Trilinear filtering + mipmaps and anisotropic filtering for the skybox
+      // / environment map, like regular textures.
+      cubeTexture.minFilter = THREE.LinearMipmapLinearFilter;
+      cubeTexture.generateMipmaps = true;
+      cubeTexture.anisotropy = getMaxAnisotropy(
+        this._resourceLoader._runtimeGame
+      );
       cubeTexture.colorSpace = THREE.SRGBColorSpace;
       cubeTexture.needsUpdate = true;
 

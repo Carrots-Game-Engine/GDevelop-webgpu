@@ -16,6 +16,9 @@ namespace gdjs {
         return new (class implements gdjs.PixiFiltersTools.Filter {
           shaderPass: THREE_ADDONS.ShaderPass;
           _isEnabled: boolean;
+          _webGPUPass: gdjs.WebGPUPostProcessingPass | null = null;
+          _webGPUHue: any = null;
+          _webGPUSaturation: any = null;
 
           constructor() {
             this.shaderPass = new THREE_ADDONS.ShaderPass(
@@ -24,6 +27,57 @@ namespace gdjs {
               )
             );
             this._isEnabled = false;
+
+            const tsl = (THREE as any).TSL;
+            if (tsl && typeof tsl.uniform === 'function') {
+              this._webGPUHue = tsl.uniform(this.shaderPass.uniforms.hue.value);
+              this._webGPUSaturation = tsl.uniform(
+                this.shaderPass.uniforms.saturation.value
+              );
+              this._webGPUPass = {
+                getOutputNode: (inputNode: any) => {
+                  const angle = this._webGPUHue.mul(Math.PI);
+                  const sine = tsl.sin(angle);
+                  const cosine = tsl.cos(angle);
+                  const sqrtThree = Math.sqrt(3);
+                  const weights = tsl.vec3(
+                    cosine.mul(2).add(1).div(3),
+                    sine.mul(-sqrtThree).sub(cosine).add(1).div(3),
+                    sine.mul(sqrtThree).sub(cosine).add(1).div(3)
+                  );
+                  const color = inputNode.rgb;
+                  const rotated = tsl.vec3(
+                    tsl.dot(color, weights),
+                    tsl.dot(color, tsl.vec3(weights.z, weights.x, weights.y)),
+                    tsl.dot(color, tsl.vec3(weights.y, weights.z, weights.x))
+                  );
+                  const average = rotated.x
+                    .add(rotated.y)
+                    .add(rotated.z)
+                    .div(3);
+                  const positiveSaturation = rotated.add(
+                    average
+                      .sub(rotated)
+                      .mul(
+                        tsl
+                          .float(1)
+                          .sub(
+                            tsl
+                              .float(1)
+                              .div(tsl.float(1.001).sub(this._webGPUSaturation))
+                          )
+                      )
+                  );
+                  const negativeSaturation = rotated.add(
+                    average.sub(rotated).mul(this._webGPUSaturation.negate())
+                  );
+                  const adjusted = this._webGPUSaturation
+                    .greaterThan(0)
+                    .select(positiveSaturation, negativeSaturation);
+                  return tsl.vec4(tsl.max(adjusted, 0), inputNode.a);
+                },
+              };
+            }
           }
 
           isEnabled(target: EffectsTarget): boolean {
@@ -43,9 +97,17 @@ namespace gdjs {
             if (!(target instanceof gdjs.Layer)) {
               return false;
             }
-            target
-              .getRenderer()
-              .addPostProcessingPass(this.shaderPass, effectData.name);
+            const layerRenderer = target.getRenderer();
+            layerRenderer.addPostProcessingPass(
+              this.shaderPass,
+              effectData.name
+            );
+            if (this._webGPUPass) {
+              layerRenderer.addPostProcessingPass(
+                this._webGPUPass,
+                effectData.name
+              );
+            }
             this._isEnabled = true;
             return true;
           }
@@ -53,17 +115,26 @@ namespace gdjs {
             if (!(target instanceof gdjs.Layer)) {
               return false;
             }
-            target.getRenderer().removePostProcessingPass(this.shaderPass);
+            const layerRenderer = target.getRenderer();
+            layerRenderer.removePostProcessingPass(this.shaderPass);
+            if (this._webGPUPass) {
+              layerRenderer.removePostProcessingPass(this._webGPUPass);
+            }
             this._isEnabled = false;
             return true;
           }
           updatePreRender(target: gdjs.EffectsTarget): any {}
           updateDoubleParameter(parameterName: string, value: number): void {
             if (parameterName === 'hue') {
-              this.shaderPass.uniforms[parameterName].value = value / 180;
+              const hue = value / 180;
+              this.shaderPass.uniforms[parameterName].value = hue;
+              if (this._webGPUHue) this._webGPUHue.value = hue;
             }
             if (parameterName === 'saturation') {
               this.shaderPass.uniforms[parameterName].value = value;
+              if (this._webGPUSaturation) {
+                this._webGPUSaturation.value = value;
+              }
             }
           }
           getDoubleParameter(parameterName: string): number {
@@ -90,8 +161,8 @@ namespace gdjs {
           updateFromNetworkSyncData(
             syncData: HueAndSaturationFilterExtra
           ): void {
-            this.shaderPass.uniforms.hue.value = syncData.h;
-            this.shaderPass.uniforms.saturation.value = syncData.s;
+            this.updateDoubleParameter('hue', syncData.h * 180);
+            this.updateDoubleParameter('saturation', syncData.s);
           }
         })();
       }

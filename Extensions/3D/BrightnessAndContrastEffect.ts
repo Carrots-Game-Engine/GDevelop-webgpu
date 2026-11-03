@@ -43,6 +43,9 @@ namespace gdjs {
         return new (class implements gdjs.PixiFiltersTools.Filter {
           shaderPass: THREE_ADDONS.ShaderPass;
           _isEnabled: boolean;
+          _webGPUPass: gdjs.WebGPUPostProcessingPass | null = null;
+          _webGPUBrightness: any = null;
+          _webGPUContrast: any = null;
 
           constructor() {
             this.shaderPass = new THREE_ADDONS.ShaderPass({
@@ -50,6 +53,38 @@ namespace gdjs {
               fragmentShader: brightnessAndContrastFragmentShader,
             });
             this._isEnabled = false;
+
+            const tsl = (THREE as any).TSL;
+            if (tsl && typeof tsl.uniform === 'function') {
+              this._webGPUBrightness = tsl.uniform(
+                this.shaderPass.uniforms.brightness.value
+              );
+              this._webGPUContrast = tsl.uniform(
+                this.shaderPass.uniforms.contrast.value
+              );
+              this._webGPUPass = {
+                getOutputNode: (inputNode: any) => {
+                  // Work in straight-alpha color just like the WebGL shader,
+                  // then premultiply again for transparent layer compositing.
+                  const alpha = tsl.clamp(inputNode.a, 0, 1);
+                  const color = inputNode.rgb
+                    .div(tsl.max(alpha, 0.000001))
+                    .add(this._webGPUBrightness);
+                  const positiveContrast = color
+                    .sub(0.5)
+                    .div(tsl.float(1).sub(this._webGPUContrast))
+                    .add(0.5);
+                  const negativeContrast = color
+                    .sub(0.5)
+                    .mul(tsl.float(1).add(this._webGPUContrast))
+                    .add(0.5);
+                  const adjusted = this._webGPUContrast
+                    .greaterThan(0)
+                    .select(positiveContrast, negativeContrast);
+                  return tsl.vec4(tsl.max(adjusted, 0).mul(alpha), inputNode.a);
+                },
+              };
+            }
           }
 
           isEnabled(target: EffectsTarget): boolean {
@@ -69,9 +104,17 @@ namespace gdjs {
             if (!(target instanceof gdjs.Layer)) {
               return false;
             }
-            target
-              .getRenderer()
-              .addPostProcessingPass(this.shaderPass, effectData.name);
+            const layerRenderer = target.getRenderer();
+            layerRenderer.addPostProcessingPass(
+              this.shaderPass,
+              effectData.name
+            );
+            if (this._webGPUPass) {
+              layerRenderer.addPostProcessingPass(
+                this._webGPUPass,
+                effectData.name
+              );
+            }
             this._isEnabled = true;
             return true;
           }
@@ -79,7 +122,11 @@ namespace gdjs {
             if (!(target instanceof gdjs.Layer)) {
               return false;
             }
-            target.getRenderer().removePostProcessingPass(this.shaderPass);
+            const layerRenderer = target.getRenderer();
+            layerRenderer.removePostProcessingPass(this.shaderPass);
+            if (this._webGPUPass) {
+              layerRenderer.removePostProcessingPass(this._webGPUPass);
+            }
             this._isEnabled = false;
             return true;
           }
@@ -87,9 +134,13 @@ namespace gdjs {
           updateDoubleParameter(parameterName: string, value: number): void {
             if (parameterName === 'brightness') {
               this.shaderPass.uniforms[parameterName].value = value;
+              if (this._webGPUBrightness) {
+                this._webGPUBrightness.value = value;
+              }
             }
             if (parameterName === 'contrast') {
               this.shaderPass.uniforms[parameterName].value = value;
+              if (this._webGPUContrast) this._webGPUContrast.value = value;
             }
           }
           getDoubleParameter(parameterName: string): number {
@@ -116,8 +167,8 @@ namespace gdjs {
           updateFromNetworkSyncData(
             data: BrightnessAndContrastFilterNetworkSyncData
           ) {
-            this.shaderPass.uniforms.brightness.value = data.b;
-            this.shaderPass.uniforms.contrast.value = data.c;
+            this.updateDoubleParameter('brightness', data.b);
+            this.updateDoubleParameter('contrast', data.c);
           }
         })();
       }

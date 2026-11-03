@@ -124,6 +124,11 @@ module.exports = function (config) {
       '/jolt-physics.wasm.js': `/base/${gdjsRuntimePath}/Extensions/Physics3DBehavior/jolt-physics.wasm.js`,
       '/jolt-physics.wasm.wasm': `/base/${gdjsRuntimePath}/Extensions/Physics3DBehavior/jolt-physics.wasm.wasm`,
     },
+    // The WebGPU build must never be loaded alongside the WebGL build: it
+    // replaces `window.THREE` (so `THREE.WebGLRenderer` would be undefined).
+    // It is matched by the `pixi-renderers/*.js` glob of the file list below,
+    // so exclude it: the runtime tests all run on the WebGL backend.
+    exclude: [`${gdjsRuntimePath}/pixi-renderers/three-webgpu.js`],
     files: [
       './GDJS/tests/node_modules/expect.js/index.js',
 
@@ -254,6 +259,7 @@ module.exports = function (config) {
       `${gdjsRuntimePath}/Extensions/3D/BrightnessAndContrastEffect.js`,
       `${gdjsRuntimePath}/Extensions/3D/DepthOfFieldEffect.js`,
       `${gdjsRuntimePath}/Extensions/3D/N8AOEffect.js`,
+      `${gdjsRuntimePath}/Extensions/3D/ToneMappingEffect.js`,
       `${gdjsRuntimePath}/Extensions/3D/DirectionalLight.js`,
       `${gdjsRuntimePath}/Extensions/3D/Scene3DTools.js`,
       `${gdjsRuntimePath}/InGameEditor/InGameEditor.js`,

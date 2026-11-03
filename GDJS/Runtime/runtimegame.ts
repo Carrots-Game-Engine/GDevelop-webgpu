@@ -2173,7 +2173,7 @@ namespace gdjs {
       if (this._initPromise) return this._initPromise;
 
       const renderer = this._renderer as any;
-      this._initPromise = renderer
+      const initPromise: Promise<void> = renderer
         .init()
         .then(() => {
           // false = don't touch canvas.style: the game renderer owns the CSS size.
@@ -2191,7 +2191,8 @@ namespace gdjs {
           // Rethrow so the game renderer can trigger the WebGL fallback.
           throw err;
         });
-      return this._initPromise;
+      this._initPromise = initPromise;
+      return initPromise;
     }
 
     isGpuReady(): boolean {

@@ -78,6 +78,8 @@ namespace gdjs {
      * read through a node instead, see `WebGPUPostProcessingPipeline`).
      */
     getSceneDepthTexture(): THREE.DepthTexture | null;
+    /** A TSL depth node for effects on WebGPU, when depth was requested. */
+    getSceneDepthNode?(): any;
 
     render(): void;
     setSize(width: number, height: number): void;
@@ -395,6 +397,7 @@ namespace gdjs {
     }> = [];
     private _customRenderPass: WebGPUPostProcessingPass | null = null;
     private _sceneDepthTextureUsersCount = 0;
+    private _ownedPasses = new Set<WebGPUPostProcessingPass>();
     private _available: boolean;
 
     constructor(options: WebGPUPostProcessingPipelineOptions) {
@@ -439,12 +442,18 @@ namespace gdjs {
       // `RenderPipeline` applies the output tone mapping/color space transform
       // itself (see `outputColorTransform`), so the raw node is used here.
       this._pipeline.outputNode = node;
+      // `outputNode` is a plain property of `RenderPipeline`: the renderer only
+      // rebuilds its full-screen material when `needsUpdate` is set. Without
+      // this, adding/removing a pass (or changing a pass's node, like the tone
+      // mapping mode) after the first frame would silently be ignored.
+      this._pipeline.needsUpdate = true;
     }
 
     addPass(pass: AnyPostProcessingPass, effectName: string) {
       if (!WebGPUPostProcessingPipeline._isWebGPUPass(pass)) {
         return;
       }
+      this._ownedPasses.add(pass);
       this._postProcessingPasses.push({ pass, effectName });
       this._rebuildOutputNode();
     }
@@ -477,6 +486,9 @@ namespace gdjs {
       this._customRenderPass = WebGPUPostProcessingPipeline._isWebGPUPass(pass)
         ? pass
         : null;
+      if (this._customRenderPass) {
+        this._ownedPasses.add(this._customRenderPass);
+      }
       this._rebuildOutputNode();
     }
 
@@ -498,7 +510,11 @@ namespace gdjs {
      * declared it needed it with `setSceneDepthTextureNeeded`.
      */
     getSceneDepthNode(): any {
-      if (!this._available || !this._scenePass) {
+      if (
+        !this._available ||
+        !this._scenePass ||
+        this._sceneDepthTextureUsersCount <= 0
+      ) {
         return null;
       }
       return this._scenePass.getTextureNode('depth');
@@ -528,10 +544,12 @@ namespace gdjs {
       if (this._pipeline && typeof this._pipeline.dispose === 'function') {
         this._pipeline.dispose();
       }
-      for (const { pass } of this._postProcessingPasses) {
+      for (const pass of this._ownedPasses) {
         if (pass.dispose) pass.dispose();
       }
+      this._ownedPasses.clear();
       this._postProcessingPasses = [];
+      this._customRenderPass = null;
     }
 
     getUnderlyingPipeline(): any {
@@ -1014,6 +1032,13 @@ namespace gdjs {
       return this._postProcessingPipeline
         ? this._postProcessingPipeline.getSceneDepthTexture()
         : null;
+    }
+
+    /**
+     * Get the scene depth as a TSL node for WebGPU post-processing effects.
+     */
+    getSceneDepthNode(): any {
+      return this._postProcessingPipeline?.getSceneDepthNode?.() || null;
     }
 
     /**

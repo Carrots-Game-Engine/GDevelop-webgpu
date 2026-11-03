@@ -15,12 +15,28 @@ namespace gdjs {
         return new (class implements gdjs.PixiFiltersTools.Filter {
           shaderPass: THREE_ADDONS.ShaderPass;
           _isEnabled: boolean;
+          _webGPUPass: gdjs.WebGPUPostProcessingPass | null = null;
+          _webGPUExposure: any = null;
 
           constructor() {
             this.shaderPass = new THREE_ADDONS.ShaderPass(
               THREE_ADDONS.ExposureShader
             );
             this._isEnabled = false;
+
+            const tsl = (THREE as any).TSL;
+            if (tsl && typeof tsl.uniform === 'function') {
+              this._webGPUExposure = tsl.uniform(
+                this.shaderPass.uniforms.exposure.value
+              );
+              this._webGPUPass = {
+                getOutputNode: (inputNode: any) =>
+                  tsl.vec4(
+                    inputNode.rgb.mul(this._webGPUExposure),
+                    inputNode.a
+                  ),
+              };
+            }
           }
 
           isEnabled(target: EffectsTarget): boolean {
@@ -40,9 +56,17 @@ namespace gdjs {
             if (!(target instanceof gdjs.Layer)) {
               return false;
             }
-            target
-              .getRenderer()
-              .addPostProcessingPass(this.shaderPass, effectData.name);
+            const layerRenderer = target.getRenderer();
+            layerRenderer.addPostProcessingPass(
+              this.shaderPass,
+              effectData.name
+            );
+            if (this._webGPUPass) {
+              layerRenderer.addPostProcessingPass(
+                this._webGPUPass,
+                effectData.name
+              );
+            }
             this._isEnabled = true;
             return true;
           }
@@ -50,7 +74,11 @@ namespace gdjs {
             if (!(target instanceof gdjs.Layer)) {
               return false;
             }
-            target.getRenderer().removePostProcessingPass(this.shaderPass);
+            const layerRenderer = target.getRenderer();
+            layerRenderer.removePostProcessingPass(this.shaderPass);
+            if (this._webGPUPass) {
+              layerRenderer.removePostProcessingPass(this._webGPUPass);
+            }
             this._isEnabled = false;
             return true;
           }
@@ -58,6 +86,7 @@ namespace gdjs {
           updateDoubleParameter(parameterName: string, value: number): void {
             if (parameterName === 'exposure') {
               this.shaderPass.uniforms[parameterName].value = value;
+              if (this._webGPUExposure) this._webGPUExposure.value = value;
             }
           }
           getDoubleParameter(parameterName: string): number {
@@ -78,7 +107,7 @@ namespace gdjs {
           updateFromNetworkSyncData(
             syncData: ExposureFilterNetworkSyncData
           ): void {
-            this.shaderPass.uniforms.exposure.value = syncData.e;
+            this.updateDoubleParameter('exposure', syncData.e);
           }
         })();
       }
