@@ -2162,27 +2162,31 @@ namespace gdjs {
      * Frames rendered while this is pending are silently skipped (the
      * loading screen covers them anyway).
      */
-    initAsync(): Promise<void> {
-      if (!this._renderer) return Promise.resolve();
+        initAsync(): Promise<void> {
+      if (!this._renderer) {
+        return Promise.reject(new Error('WebGPURenderer was not created.'));
+      }
       if (this._initPromise) return this._initPromise;
 
-      this._initPromise = (this._renderer as any)
+      const renderer = this._renderer as any;
+      this._initPromise = renderer
         .init()
         .then(() => {
+          // false = don't touch canvas.style: the game renderer owns the CSS size.
+          renderer.setSize(this._pendingWidth, this._pendingHeight, false);
           this._gpuReady = true;
           _threeAdapterLogger.info('WebGPU backend ready.');
         })
         .catch((err: unknown) => {
-          _threeAdapterLogger.error(
-            'WebGPURenderer.init() failed; 3-D rendering will not be available:',
-            err
-          );
+          _threeAdapterLogger.error('WebGPURenderer.init() failed:', err);
           this._gpuReady = false;
-          // Dispose so the adapter transparently falls back to no-renderer.
-          this._renderer?.dispose();
+          try {
+            renderer.dispose();
+          } catch (e) {}
           this._renderer = null;
+          // Rethrow so the game renderer can trigger the WebGL fallback.
+          throw err;
         });
-
       return this._initPromise;
     }
 
