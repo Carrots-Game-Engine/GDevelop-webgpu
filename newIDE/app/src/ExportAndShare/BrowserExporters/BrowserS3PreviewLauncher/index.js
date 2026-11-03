@@ -81,6 +81,8 @@ export default class BrowserS3PreviewLauncher extends React.Component<
     this.setState({
       error: null,
     });
+    const threeBackend =
+      previewOptions.threeBackend === 'webgpu' ? 'webgpu' : 'webgl';
 
     if (previewOptions.isForGameplayTest) {
       throw new Error(
@@ -250,7 +252,8 @@ export default class BrowserS3PreviewLauncher extends React.Component<
       // Change the HTML file displayed by the preview window so that it starts loading
       // the game.
       previewWindows.forEach((previewWindow: WindowProxy) => {
-        previewWindow.location = outputDir + '/index.html';
+        previewWindow.location =
+          outputDir + '/index.html?threeBackend=' + threeBackend;
         try {
           previewWindow.focus();
         } catch (e) {}

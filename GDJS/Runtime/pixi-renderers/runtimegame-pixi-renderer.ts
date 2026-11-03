@@ -1088,6 +1088,16 @@ namespace gdjs {
     }
 
     /**
+     * Check if a Three.js renderer backend (WebGL or WebGPU) was initialized.
+     *
+     * `getThreeRenderer()` intentionally returns null in WebGPU mode, so use
+     * this method when only the availability of 3D rendering matters.
+     */
+    isThreeRenderingAvailable(): boolean {
+      return !!this._threeAdapter;
+    }
+
+    /**
      * Get the ThreeRendererAdapter for the game - if any.
      * Prefer `getThreeRenderer()` for direct Three.js access;
      * use this only when adapter-level operations (resize, resetState, dispose) are needed.

@@ -37,6 +37,7 @@ type State = {|
   networkPreviewError: ?any,
   hotReloadsCount: number,
   previewGamePath: ?string,
+  threeBackend: 'webgl' | 'webgpu',
   previewBrowserWindowOptions: ?{
     width: number,
     height: number,
@@ -98,6 +99,7 @@ export default class LocalPreviewLauncher extends React.Component<
     networkPreviewPort: null,
     networkPreviewError: null,
     previewGamePath: null,
+    threeBackend: 'webgl',
     previewBrowserWindowOptions: null,
     hotReloadsCount: 0,
     hideMenuBar: true,
@@ -111,6 +113,7 @@ export default class LocalPreviewLauncher extends React.Component<
   _openPreviewBrowserWindow = () => {
     const {
       previewGamePath,
+      threeBackend,
       previewBrowserWindowOptions,
       captureOptions,
       alwaysOnTop,
@@ -123,7 +126,7 @@ export default class LocalPreviewLauncher extends React.Component<
 
     ipcRenderer.invoke('preview-open', {
       previewBrowserWindowOptions,
-      previewGameIndexHtmlPath: `file://${previewGamePath}/index.html`,
+      previewGameIndexHtmlPath: `file://${previewGamePath}/index.html?threeBackend=${threeBackend}`,
       alwaysOnTop,
       hideMenuBar,
       numberOfWindows,
@@ -181,6 +184,7 @@ export default class LocalPreviewLauncher extends React.Component<
           },
         },
         previewGamePath: gamePath,
+        threeBackend: options.threeBackend === 'webgpu' ? 'webgpu' : 'webgl',
         hideMenuBar: !options.getIsMenuBarHiddenInPreview(),
         alwaysOnTop: options.getIsAlwaysOnTopInPreview(),
         numberOfWindows: options.numberOfWindows,
@@ -235,6 +239,8 @@ export default class LocalPreviewLauncher extends React.Component<
     } = previewOptions;
 
     const previewId = nextPreviewId++;
+    const threeBackend =
+      previewOptions.threeBackend === 'webgpu' ? 'webgpu' : 'webgl';
     console.log(
       `[LocalPreviewLauncher] Launching preview #${previewId} with options:`,
       previewOptions
@@ -459,7 +465,7 @@ export default class LocalPreviewLauncher extends React.Component<
         // no window to open. The previewId in the URL forces the frame to
         // reload the game when the same preview is re-exported.
         setGameplayTestFramePreviewLocation({
-          previewIndexHtmlLocation: `file://${outputDir}/index.html?previewId=${previewId}`,
+          previewIndexHtmlLocation: `file://${outputDir}/index.html?previewId=${previewId}&threeBackend=${threeBackend}`,
           // The game window of the frame is fixed at the project
           // resolution: the frame only zooms its display.
           gameResolution: {

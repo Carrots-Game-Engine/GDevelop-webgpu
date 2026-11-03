@@ -40,25 +40,35 @@
     <script>
     (function() {
       var backend = 'webgl';
+      var hasUrlBackend = false;
 
-      // 1. URL param override (useful for testing without rebuilding)
+      // 1. URL param override (useful for testing without rebuilding).
+      //    Both values are honoured so that the editor can force WebGL even
+      //    when the project asks for WebGPU.
       try {
         var params = new URLSearchParams(window.location.search);
-        if (params.get('threeBackend') === 'webgpu') backend = 'webgpu';
+        var urlBackend = params.get('threeBackend');
+        if (urlBackend === 'webgpu' || urlBackend === 'webgl') {
+          backend = urlBackend;
+          hasUrlBackend = true;
+        }
       } catch(e) {}
 
       // 2. Project data (available when the data.js script has already run,
       //    which happens in exported builds where data.js is listed before
       //    index.html scripts — in previews the ExporterHelper will inject
       //    the correct script tag directly via GDJS_CODE_FILES).
-      try {
-        if (typeof gdjs !== 'undefined' &&
-            gdjs.projectData &&
-            gdjs.projectData.properties &&
-            gdjs.projectData.properties.threeBackend === 'webgpu') {
-          backend = 'webgpu';
-        }
-      } catch(e) {}
+      //    Only used when the URL did not explicitly select a backend.
+      if (!hasUrlBackend) {
+        try {
+          if (typeof gdjs !== 'undefined' &&
+              gdjs.projectData &&
+              gdjs.projectData.properties &&
+              gdjs.projectData.properties.threeBackend === 'webgpu') {
+            backend = 'webgpu';
+          }
+        } catch(e) {}
+      }
 
       // Expose for any script that loads after this snippet.
       window.__gdThreeBackend = backend;

@@ -361,6 +361,10 @@ export default class PreferencesProvider extends React.Component<Props, State> {
     // $FlowFixMe[method-unbinding]
     getUse3DEditor: (this._getUse3DEditor.bind(this): any),
     // $FlowFixMe[method-unbinding]
+    setThreeBackend: (this._setThreeBackend.bind(this): any),
+    // $FlowFixMe[method-unbinding]
+    getThreeBackend: (this._getThreeBackend.bind(this): any),
+    // $FlowFixMe[method-unbinding]
     setShowBasicProfilingCounters: (this._setShowBasicProfilingCounters.bind(
       this
     ): any),
@@ -807,6 +811,22 @@ export default class PreferencesProvider extends React.Component<Props, State> {
 
   _getUse3DEditor(): any {
     return this.state.values.use3DEditor;
+  }
+
+  _setThreeBackend(threeBackend: 'webgl' | 'webgpu') {
+    this.setState(
+      state => ({
+        values: {
+          ...state.values,
+          threeBackend,
+        },
+      }),
+      () => this._persistValuesToLocalStorage(this.state)
+    );
+  }
+
+  _getThreeBackend(): 'webgl' | 'webgpu' {
+    return this.state.values.threeBackend;
   }
 
   _setShowBasicProfilingCounters(showBasicProfilingCounters: boolean) {

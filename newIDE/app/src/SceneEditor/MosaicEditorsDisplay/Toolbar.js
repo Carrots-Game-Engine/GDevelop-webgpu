@@ -29,6 +29,7 @@ import {
 import CompactToggleButtons from '../../UI/CompactToggleButtons';
 import Grid2d from '../../UI/CustomSvgIcons/Grid2d';
 import Grid3d from '../../UI/CustomSvgIcons/Grid3d';
+import ThreeBackendToggle from '../ThreeBackendToggle';
 
 type Props = {|
   gameEditorMode: 'embedded-game' | 'instances-editor',
@@ -110,6 +111,7 @@ const Toolbar: React.ComponentType<Props> = React.memo<Props>(function Toolbar(
             },
           ]}
         />
+        <ThreeBackendToggle />
         <ToolbarSeparator />
         <IconButton
           size="small"

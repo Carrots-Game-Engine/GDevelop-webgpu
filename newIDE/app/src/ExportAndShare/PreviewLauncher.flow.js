@@ -53,6 +53,7 @@ export type PreviewOptions = {|
   shouldReloadResources: boolean,
   shouldHardReload: boolean,
   fullLoadingScreen: boolean,
+  threeBackend?: 'webgl' | 'webgpu',
   fallbackAuthor: ?{ id: string, username: string },
   authenticatedPlayer: ?{
     playerId: string,

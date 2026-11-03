@@ -441,6 +441,7 @@ const PreferencesDialog = ({
     setBlockPreviewAndExportOnDiagnosticErrors,
     setShowDeprecatedInstructionWarning,
     setUse3DEditor,
+    setThreeBackend,
     setShowBasicProfilingCounters,
     setNewProjectsDefaultFolder,
     setUseShortcutToClosePreviewWindow,
@@ -1104,6 +1105,16 @@ const PreferencesDialog = ({
                 ),
             },
             {
+              id: 'three-backend',
+              label: i18n._(
+                t`Use the experimental WebGPU renderer for 3D rendering when available`
+              ),
+              renderControl: () =>
+                renderToggle(values.threeBackend === 'webgpu', useWebGPU =>
+                  setThreeBackend(useWebGPU ? 'webgpu' : 'webgl')
+                ),
+            },
+            {
               id: 'use-3d-editor',
               label: i18n._(t`Show objects in 3D in the scene editor`),
               renderControl: () =>
@@ -1120,6 +1131,13 @@ const PreferencesDialog = ({
                 <Trans>
                   3D rendering is not available because this device does not
                   support WebGL2.
+                </Trans>
+              </AlertMessage>
+            ) : values.threeBackend === 'webgpu' ? (
+              <AlertMessage kind="info">
+                <Trans>
+                  WebGPU is experimental. If it is not available, the game falls
+                  back to WebGL automatically.
                 </Trans>
               </AlertMessage>
             ) : initialUse3DEditor.current !== values.use3DEditor ? (

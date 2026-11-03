@@ -2,6 +2,7 @@
 import * as React from 'react';
 import { Trans } from '@lingui/macro';
 import { type PreviewDebuggerServer } from '../ExportAndShare/PreviewLauncher.flow';
+import PreferencesContext from '../MainFrame/Preferences/PreferencesContext';
 import { objectWithContextReactDndType } from '../ObjectsList';
 import { makeDropTarget } from '../UI/DragAndDrop/DropTarget';
 import Text from '../UI/Text';
@@ -239,6 +240,9 @@ export const EmbeddedGameFrame = ({
   onEnable,
   children,
 }: Props): React.MixedElement => {
+  const { values: preferencesValues } = React.useContext(PreferencesContext);
+  const threeBackend = preferencesValues.threeBackend;
+
   const [
     previewIndexHtmlLocation,
     setPreviewIndexHtmlLocation,
@@ -639,7 +643,9 @@ export const EmbeddedGameFrame = ({
   );
 
   const iframeSource = previewIndexHtmlLocation
-    ? `${previewIndexHtmlLocation}?gameFrameLoadId=${gameFrameLoadId}`
+    ? `${previewIndexHtmlLocation}${
+        previewIndexHtmlLocation.includes('?') ? '&' : '?'
+      }gameFrameLoadId=${gameFrameLoadId}&threeBackend=${threeBackend}`
     : '';
 
   // A new location is a new game to load: it has to announce itself again.

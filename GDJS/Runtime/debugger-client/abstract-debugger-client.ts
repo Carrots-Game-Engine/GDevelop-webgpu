@@ -891,7 +891,7 @@ namespace gdjs {
             gameFrameLoadId: getGameFrameLoadId(),
             // Unknown (null) until the renderers are initialized.
             is3DRenderingAvailable: gameRenderer.getPIXIRenderer()
-              ? !!gameRenderer.getThreeRenderer()
+              ? gameRenderer.isThreeRenderingAvailable()
               : null,
           },
         })

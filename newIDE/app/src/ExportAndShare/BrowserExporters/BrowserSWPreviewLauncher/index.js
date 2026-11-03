@@ -139,6 +139,8 @@ export default class BrowserSWPreviewLauncher extends React.Component<
     });
 
     const previewId = nextPreviewId++;
+    const threeBackend =
+      previewOptions.threeBackend === 'webgpu' ? 'webgpu' : 'webgl';
     console.log(
       `[BrowserSWPreviewLauncher] Launching preview #${previewId} with options:`,
       previewOptions
@@ -310,7 +312,11 @@ export default class BrowserSWPreviewLauncher extends React.Component<
         // no window to open.
         setGameplayTestFramePreviewLocation({
           previewIndexHtmlLocation:
-            outputDir + '/index.html?previewId=' + previewId,
+            outputDir +
+            '/index.html?previewId=' +
+            previewId +
+            '&threeBackend=' +
+            threeBackend,
           // The game window of the frame is fixed at the project
           // resolution: the frame only zooms its display.
           gameResolution: {
@@ -390,7 +396,8 @@ export default class BrowserSWPreviewLauncher extends React.Component<
         previewWindows.forEach((previewWindow: WindowProxy) => {
           // Change the HTML file displayed by the preview window so that it starts loading
           // the game.
-          previewWindow.location = outputDir + '/index.html';
+          previewWindow.location =
+            outputDir + '/index.html?threeBackend=' + threeBackend;
           try {
             previewWindow.focus();
           } catch (e) {}
