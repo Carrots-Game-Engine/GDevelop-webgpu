@@ -586,6 +586,11 @@ declare interface ProjectPropertiesData {
   sceneResourcesPreloading?: 'at-startup' | 'never';
   sceneResourcesUnloading?: 'at-scene-exit' | 'never';
   areEffectsHiddenInEditor?: boolean;
+  /**
+   * The 3D rendering backend to use ("webgl" or "webgpu").
+   * Defaults to "webgl" when absent (backward-compatible).
+   */
+  threeBackend?: 'webgl' | 'webgpu';
 }
 
 declare interface ExtensionProperty {

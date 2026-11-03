@@ -218,6 +218,7 @@ namespace gdjs {
     _pixelsRounding: boolean;
     _antialiasingMode: 'none' | 'MSAA';
     _isAntialisingEnabledOnMobile: boolean;
+    _threeBackend: 'webgl' | 'webgpu';
     /**
      * Game loop management (see startGameLoop method)
      */
@@ -354,6 +355,7 @@ namespace gdjs {
       this._antialiasingMode = this._data.properties.antialiasingMode;
       this._isAntialisingEnabledOnMobile =
         this._data.properties.antialisingEnabledOnMobile;
+      this._threeBackend = this._data.properties.threeBackend || 'webgl';
 
       this._renderer = new gdjs.RuntimeGameRenderer(
         this,
@@ -902,6 +904,15 @@ namespace gdjs {
      */
     isAntialisingEnabledOnMobile(): boolean {
       return this._isAntialisingEnabledOnMobile;
+    }
+
+    /**
+     * Return the Three.js rendering backend requested by the project
+     * ("webgl" or "webgpu").  Defaults to "webgl" for projects that
+     * pre-date the setting.
+     */
+    getThreeBackend(): 'webgl' | 'webgpu' {
+      return this._threeBackend;
     }
 
     /**

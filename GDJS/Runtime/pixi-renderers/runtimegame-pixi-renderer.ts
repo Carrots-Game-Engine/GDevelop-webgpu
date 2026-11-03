@@ -43,7 +43,7 @@ namespace gdjs {
     private _pointerLockReasons: Set<string> = new Set();
 
     _pixiRenderer: PIXI.Renderer | null = null;
-    private _threeRenderer: THREE.WebGLRenderer | null = null;
+    private _threeAdapter: gdjs.ThreeRendererAdapter | null = null;
     private _gameCanvas: HTMLCanvasElement | null = null;
     private _domElementsContainer: HTMLDivElement | null = null;
 
@@ -111,40 +111,30 @@ namespace gdjs {
         typeof THREE !== 'undefined' &&
         document.createElement('canvas').getContext('webgl2')
       ) {
-        try {
-          this._threeRenderer = new THREE.WebGLRenderer({
-            canvas: gameCanvas,
-            stencil: true,
-            antialias:
-              this._game.getAntialiasingMode() !== 'none' &&
-              (this._game.isAntialisingEnabledOnMobile() ||
-                !gdjs.evtTools.common.isMobile()),
-            preserveDrawingBuffer: true, // Keep to true to allow screenshots.
-            // Ask for the discrete graphics card, if any.
-            powerPreference: 'high-performance',
-          });
-        } catch (error) {
+        const backendType = gdjs.getThreeBackend(this._game);
+        const adapter = new gdjs.ThreeRendererAdapter(backendType);
+        const ok = adapter.init({
+          canvas: gameCanvas,
+          stencil: true,
+          antialias:
+            this._game.getAntialiasingMode() !== 'none' &&
+            (this._game.isAntialisingEnabledOnMobile() ||
+              !gdjs.evtTools.common.isMobile()),
+          preserveDrawingBuffer: true, // Keep to true to allow screenshots.
+          powerPreference: 'high-performance',
+          width: this._game.getGameResolutionWidth(),
+          height: this._game.getGameResolutionHeight(),
+        });
+        if (ok) {
+          this._threeAdapter = adapter;
+        } else {
           // The context creation can still fail, for example with software
           // rendering running out of resources: fall back to 2D rendering.
-          logger.error(
-            'Unable to create the Three.js renderer, falling back to 2D rendering:',
-            error
-          );
-          this._threeRenderer = null;
+          this._threeAdapter = null;
         }
       }
 
-      if (this._threeRenderer) {
-        this._threeRenderer.shadowMap.enabled = true;
-        // PCFSoftShadowMap is deprecated since Three.js r180 and replaced by
-        // PCFShadowMap (with a warning) when rendering.
-        this._threeRenderer.shadowMap.type = THREE.PCFShadowMap;
-        this._threeRenderer.autoClear = false;
-        this._threeRenderer.setSize(
-          this._game.getGameResolutionWidth(),
-          this._game.getGameResolutionHeight()
-        );
-
+      if (this._threeAdapter) {
         // Create a PixiJS renderer that use the same GL context as Three.js
         // so that both can render to the canvas and even have PixiJS rendering
         // reused in Three.js (by using a RenderTexture and the same internal WebGL texture).
@@ -153,7 +143,7 @@ namespace gdjs {
           height: this._game.getGameResolutionHeight(),
           view: gameCanvas,
           // @ts-ignore - reuse the context from Three.js.
-          context: this._threeRenderer.getContext(),
+          context: this._threeAdapter.getContext(),
           clearBeforeRender: false,
           preserveDrawingBuffer: true, // Keep to true to allow screenshots.
           antialias: false,
@@ -325,8 +315,8 @@ namespace gdjs {
           this._game.getGameResolutionHeight()
         );
 
-        if (this._threeRenderer) {
-          this._threeRenderer.setSize(
+        if (this._threeAdapter) {
+          this._threeAdapter.resize(
             this._game.getGameResolutionWidth(),
             this._game.getGameResolutionHeight()
           );
@@ -1053,7 +1043,16 @@ namespace gdjs {
      * Get the Three.js renderer for the game - if any.
      */
     getThreeRenderer(): THREE.WebGLRenderer | null {
-      return this._threeRenderer;
+      return this._threeAdapter ? this._threeAdapter.getThreeRenderer() : null;
+    }
+
+    /**
+     * Get the ThreeRendererAdapter for the game - if any.
+     * Prefer `getThreeRenderer()` for direct Three.js access;
+     * use this only when adapter-level operations (resize, resetState, dispose) are needed.
+     */
+    getThreeAdapter(): gdjs.ThreeRendererAdapter | null {
+      return this._threeAdapter;
     }
 
     /**
@@ -1129,9 +1128,9 @@ namespace gdjs {
      */
     dispose(removeCanvas?: boolean) {
       this._pixiRenderer?.destroy();
-      this._threeRenderer?.dispose();
+      this._threeAdapter?.dispose();
       this._pixiRenderer = null;
-      this._threeRenderer = null;
+      this._threeAdapter = null;
 
       if (removeCanvas && this._gameCanvas) {
         this._gameCanvas.parentNode?.removeChild(this._gameCanvas);
