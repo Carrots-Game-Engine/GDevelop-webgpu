@@ -1943,4 +1943,165 @@ namespace gdjs {
       }
     }
   }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // ThreeRendererAdapter — defined here (inside runtimegame.ts) so that it is
+  // available as soon as runtimegame.js is loaded, regardless of the order in
+  // which the other pixi-renderer scripts arrive in the page.
+  // The full JSDoc lives in pixi-renderers/ThreeRendererAdapter.ts; keep this
+  // copy in sync with it.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const _threeAdapterLogger = new gdjs.Logger('ThreeRendererAdapter');
+
+  /** Options forwarded to the active backend at init time. */
+  export interface ThreeRendererAdapterOptions {
+    canvas: HTMLCanvasElement;
+    stencil?: boolean;
+    antialias?: boolean;
+    preserveDrawingBuffer?: boolean;
+    powerPreference?: 'default' | 'high-performance' | 'low-power';
+    width: integer;
+    height: integer;
+  }
+
+  /** Contract every rendering backend must satisfy. */
+  export interface IThreeBackend {
+    init(options: ThreeRendererAdapterOptions): boolean;
+    render(scene: THREE.Scene, camera: THREE.Camera): void;
+    resize(width: integer, height: integer): void;
+    resetState(): void;
+    dispose(): void;
+    getThreeRenderer(): THREE.WebGLRenderer | null;
+    getContext(): WebGL2RenderingContext | WebGLRenderingContext | null;
+    isInitialized(): boolean;
+  }
+
+  /** WebGL backend: wraps THREE.WebGLRenderer. */
+  export class WebGLBackend implements IThreeBackend {
+    private _renderer: THREE.WebGLRenderer | null = null;
+
+    init(options: ThreeRendererAdapterOptions): boolean {
+      if (this._renderer) {
+        _threeAdapterLogger.error(
+          'WebGLBackend.init() called while a renderer already exists. Call dispose() first.'
+        );
+        return false;
+      }
+      if (typeof THREE === 'undefined') {
+        _threeAdapterLogger.warn('Three.js is not available.');
+        return false;
+      }
+      try {
+        this._renderer = new THREE.WebGLRenderer({
+          canvas: options.canvas,
+          stencil: options.stencil !== undefined ? options.stencil : true,
+          antialias: options.antialias !== undefined ? options.antialias : false,
+          preserveDrawingBuffer:
+            options.preserveDrawingBuffer !== undefined
+              ? options.preserveDrawingBuffer
+              : true,
+          powerPreference: options.powerPreference || 'high-performance',
+        });
+      } catch (error) {
+        _threeAdapterLogger.error(
+          'THREE.WebGLRenderer constructor threw; falling back to 2-D only rendering:',
+          error
+        );
+        this._renderer = null;
+        return false;
+      }
+      this._renderer.shadowMap.enabled = true;
+      this._renderer.shadowMap.type = THREE.PCFShadowMap;
+      this._renderer.autoClear = false;
+      this._renderer.setSize(options.width, options.height);
+      return true;
+    }
+
+    render(scene: THREE.Scene, camera: THREE.Camera): void {
+      if (!this._renderer) return;
+      this._renderer.render(scene, camera);
+    }
+
+    resize(width: integer, height: integer): void {
+      if (!this._renderer) return;
+      this._renderer.setSize(width, height);
+    }
+
+    resetState(): void {
+      if (!this._renderer) return;
+      this._renderer.resetState();
+    }
+
+    dispose(): void {
+      if (!this._renderer) return;
+      this._renderer.dispose();
+      this._renderer = null;
+    }
+
+    getThreeRenderer(): THREE.WebGLRenderer | null {
+      return this._renderer;
+    }
+
+    getContext(): WebGL2RenderingContext | WebGLRenderingContext | null {
+      return this._renderer ? this._renderer.getContext() : null;
+    }
+
+    isInitialized(): boolean {
+      return this._renderer !== null;
+    }
+  }
+
+  /** Public facade that owns one IThreeBackend and delegates every call to it. */
+  export class ThreeRendererAdapter {
+    private readonly _backend: IThreeBackend;
+
+    constructor(backendType: 'webgl' | 'webgpu') {
+      this._backend = ThreeRendererAdapter.createBackend(backendType);
+    }
+
+    static createBackend(backendType: 'webgl' | 'webgpu'): IThreeBackend {
+      if (backendType === 'webgpu') {
+        _threeAdapterLogger.warn(
+          "WebGPU backend requested but not yet implemented; falling back to 'webgl'."
+        );
+      }
+      return new gdjs.WebGLBackend();
+    }
+
+    init(options: ThreeRendererAdapterOptions): boolean {
+      return this._backend.init(options);
+    }
+    render(scene: THREE.Scene, camera: THREE.Camera): void {
+      this._backend.render(scene, camera);
+    }
+    resize(width: integer, height: integer): void {
+      this._backend.resize(width, height);
+    }
+    resetState(): void {
+      this._backend.resetState();
+    }
+    dispose(): void {
+      this._backend.dispose();
+    }
+    getThreeRenderer(): THREE.WebGLRenderer | null {
+      return this._backend.getThreeRenderer();
+    }
+    getContext(): WebGL2RenderingContext | WebGLRenderingContext | null {
+      return this._backend.getContext();
+    }
+    isInitialized(): boolean {
+      return this._backend.isInitialized();
+    }
+    getBackendType(): 'webgl' | 'webgpu' {
+      return this._backend instanceof gdjs.WebGLBackend ? 'webgl' : 'webgpu';
+    }
+  }
+
+  /** Read the Three.js backend type from game data. */
+  export function getThreeBackend(
+    game: gdjs.RuntimeGame
+  ): 'webgl' | 'webgpu' {
+    return game.getThreeBackend();
+  }
 }

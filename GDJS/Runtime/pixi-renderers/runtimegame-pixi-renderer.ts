@@ -111,7 +111,7 @@ namespace gdjs {
         typeof THREE !== 'undefined' &&
         document.createElement('canvas').getContext('webgl2')
       ) {
-        const backendType = gdjs.getThreeBackend(this._game);
+        const backendType = this._game.getThreeBackend();
         const adapter = new gdjs.ThreeRendererAdapter(backendType);
         const ok = adapter.init({
           canvas: gameCanvas,
