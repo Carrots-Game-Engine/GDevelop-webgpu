@@ -25,6 +25,45 @@
 
         /* GDJS_CUSTOM_STYLE */
 	</style>
+    <!--
+      Three.js backend selection — runs synchronously before any other script.
+
+      Priority order (first match wins):
+        1. URL parameter  ?threeBackend=webgpu  (dev/testing override)
+        2. gdjs.projectData.properties.threeBackend  (set by the project)
+        3. Default: "webgl"
+
+      Only one of three.js / three-webgpu.js is ever loaded in a page.
+      Loading both would create two separate module instances and break
+      instanceof checks (isMesh, isObject3D, …).
+    -->
+    <script>
+    (function() {
+      var backend = 'webgl';
+
+      // 1. URL param override (useful for testing without rebuilding)
+      try {
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('threeBackend') === 'webgpu') backend = 'webgpu';
+      } catch(e) {}
+
+      // 2. Project data (available when the data.js script has already run,
+      //    which happens in exported builds where data.js is listed before
+      //    index.html scripts — in previews the ExporterHelper will inject
+      //    the correct script tag directly via GDJS_CODE_FILES).
+      try {
+        if (typeof gdjs !== 'undefined' &&
+            gdjs.projectData &&
+            gdjs.projectData.properties &&
+            gdjs.projectData.properties.threeBackend === 'webgpu') {
+          backend = 'webgpu';
+        }
+      } catch(e) {}
+
+      // Expose for any script that loads after this snippet.
+      window.__gdThreeBackend = backend;
+    })();
+    </script>
     <!-- Libs and GDJS core files : -->
 	<!-- GDJS_CODE_FILES -->
 

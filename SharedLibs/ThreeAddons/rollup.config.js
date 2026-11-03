@@ -34,6 +34,37 @@ export default [
     ],
   },
   {
+    // Bundle the Three.js *WebGPU* flavour as a classic UMD script that also
+    // exposes `window.THREE`.  Loaded *instead of* (never alongside) three.js
+    // when the project sets `threeBackend = "webgpu"`.
+    //
+    // `three/webgpu` re-exports the full Three.js core PLUS WebGPURenderer,
+    // WebGPUBackend, WebGLBackend and the TSL node-material system — all from
+    // a single module instance, so instanceof checks and isMesh() keep working.
+    input: './src/three-webgpu.ts',
+    output: [
+      {
+        name: 'THREE',
+        format: 'umd',
+        file: './dist/three-webgpu.js',
+        sourcemap: true,
+      },
+      {
+        name: 'THREE',
+        format: 'umd',
+        file: '../../GDJS/Runtime/pixi-renderers/three-webgpu.js',
+        sourcemap: false,
+      },
+    ],
+    plugins: [
+      resolve({
+        extensions: ['.js', '.ts'],
+      }),
+      terser(),
+      json(),
+    ],
+  },
+  {
   	input: './src/index.ts',
   	output: [
       {
