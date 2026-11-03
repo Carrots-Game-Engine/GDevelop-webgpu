@@ -65,22 +65,22 @@ namespace gdjs {
      * Take a screenshot and upload it to the server.
      */
     async takeAndUploadScreenshot(signedUrl: string) {
-      const canvas = this._gameRenderer.getCanvas();
-      if (canvas) {
-        try {
-          const base64Data = canvas.toDataURL('image/png');
-          const blobData = base64ToBlob(base64Data);
+      try {
+        const canvas = this._gameRenderer.getCanvasForCapture();
+        if (!canvas) return;
 
-          await fetch(signedUrl, {
-            method: 'PUT',
-            body: blobData,
-            headers: {
-              'Content-Type': 'image/png',
-            },
-          });
-        } catch (error) {
-          console.error('Error while uploading screenshot:', error);
-        }
+        const base64Data = canvas.toDataURL('image/png');
+        const blobData = base64ToBlob(base64Data);
+
+        await fetch(signedUrl, {
+          method: 'PUT',
+          body: blobData,
+          headers: {
+            'Content-Type': 'image/png',
+          },
+        });
+      } catch (error) {
+        console.error('Error while uploading screenshot:', error);
       }
     }
   }

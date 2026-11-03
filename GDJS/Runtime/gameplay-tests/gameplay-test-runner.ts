@@ -3949,8 +3949,8 @@ namespace gdjs {
               'A JPEG screenshot has no transparency: use the PNG format (the default with `transparentBackground`).'
             );
           }
-          const canvas = this._runtimeGame.getRenderer().getCanvas();
-          if (!canvas) {
+          const gameRenderer = this._runtimeGame.getRenderer();
+          if (!gameRenderer.getCanvas()) {
             logger.warn('No canvas found: unable to take a screenshot.');
             return;
           }
@@ -3972,7 +3972,10 @@ namespace gdjs {
                   // drawn by default, and a slow renderer delays animation
                   // frames, so the canvas could show an old frame.
                   if (currentScene) currentScene.render({ backgroundColor });
-                  return this._readCanvasImage(canvas, screenshotOptions);
+                  const captureCanvas = gameRenderer.getCanvasForCapture();
+                  return captureCanvas
+                    ? this._readCanvasImage(captureCanvas, screenshotOptions)
+                    : null;
                 };
                 imageData = transparentBackground
                   ? computeImageOnTransparentBackground(
@@ -4086,7 +4089,7 @@ namespace gdjs {
 
         const gameRenderer = this._runtimeGame.getRenderer();
         const pixiRenderer = gameRenderer.getPIXIRenderer();
-        const threeRenderer = gameRenderer.getThreeRenderer();
+        const threeRenderer = gameRenderer.getActiveThreeRenderer();
         const currentScene = this._runtimeGame
           .getSceneStack()
           .getCurrentScene();

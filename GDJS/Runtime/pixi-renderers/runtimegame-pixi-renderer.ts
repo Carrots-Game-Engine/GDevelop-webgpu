@@ -153,7 +153,25 @@ namespace gdjs {
         });
         if (ok) {
           this._threeAdapter = adapter;
-          if (isWebGPU) this._threeCanvas = threeCanvas;
+          if (isWebGPU) {
+            this._threeCanvas = threeCanvas;
+            // Three.js r185 provides an explicit device-loss callback. Keep
+            // Three.js' diagnostics, then reload this game with WebGL if the
+            // device is lost after successful initialization.
+            const webGPURenderer: any = adapter.getWebGPURenderer();
+            if (webGPURenderer) {
+              const onDeviceLost = webGPURenderer.onDeviceLost;
+              webGPURenderer.onDeviceLost = (info: any) => {
+                if (typeof onDeviceLost === 'function') {
+                  onDeviceLost.call(webGPURenderer, info);
+                }
+                logger.error('WebGPU device was lost:', info);
+                if (this._threeAdapter === adapter && !this._wasDisposed) {
+                  this._fallbackToWebGL('WebGPU device was lost');
+                }
+              };
+            }
+          }
           // WebGPU GPU acquisition is asynchronous: keep the adapter (so 3D is
           // reported as available and resize/dispose keep working) and only fall
           // back to WebGL if the device could not be acquired at all.
@@ -1187,6 +1205,18 @@ namespace gdjs {
     }
 
     /**
+     * Get the active Three.js renderer, regardless of whether it is WebGL or
+     * WebGPU. Prefer this for APIs shared by both backends; use the specific
+     * getters when calling backend-only APIs.
+     */
+    getActiveThreeRenderer():
+      | THREE.WebGLRenderer
+      | THREE.WebGPURenderer
+      | null {
+      return this._threeAdapter?.getActiveRenderer() || null;
+    }
+
+    /**
      * Check if a Three.js renderer backend (WebGL or WebGPU) was initialized.
      *
      * `getThreeRenderer()` intentionally returns null in WebGPU mode, so use
@@ -1297,7 +1327,41 @@ namespace gdjs {
     }
 
     /**
-     * Get the canvas DOM element.
+     * Get the canvas DOM element used for 3D rendering in WebGPU mode.
+     */
+    getWebGPUCanvas(): HTMLCanvasElement | null {
+      return this._threeCanvas;
+    }
+
+    /**
+     * Get a canvas containing the composited game image for screenshots.
+     * In WebGPU mode, Three.js renders to a separate canvas underneath PixiJS;
+     * draw them in the same order as the page compositor.
+     */
+    getCanvasForCapture(): HTMLCanvasElement | null {
+      const gameCanvas = this._gameCanvas;
+      if (!gameCanvas || !this._threeCanvas) return gameCanvas;
+
+      const width = gameCanvas.width;
+      const height = gameCanvas.height;
+      if (width <= 0 || height <= 0) return gameCanvas;
+
+      const captureCanvas = document.createElement('canvas');
+      captureCanvas.width = width;
+      captureCanvas.height = height;
+      const context = captureCanvas.getContext('2d');
+      if (!context) {
+        throw new Error('Unable to create a 2D context for the game screenshot.');
+      }
+
+      // Match CSS stacking: WebGPU is below PixiJS, whose canvas is transparent.
+      context.drawImage(this._threeCanvas, 0, 0, width, height);
+      context.drawImage(gameCanvas, 0, 0, width, height);
+      return captureCanvas;
+    }
+
+    /**
+     * Get the canvas DOM element used by PixiJS and by standard game input.
      */
     getCanvas(): HTMLCanvasElement | null {
       return this._gameCanvas;

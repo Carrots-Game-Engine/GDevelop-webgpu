@@ -2331,6 +2331,15 @@ namespace gdjs {
     getWebGPURenderer(): THREE.WebGPURenderer | null {
       return this._backend.getWebGPURenderer();
     }
+    /** Return the active renderer for backend-independent Three.js APIs. */
+    getActiveRenderer():
+      | THREE.WebGLRenderer
+      | THREE.WebGPURenderer
+      | null {
+      return this._backend instanceof gdjs.WebGPUBackend
+        ? this._backend.getWebGPURenderer()
+        : this._backend.getThreeRenderer();
+    }
     getContext(): WebGL2RenderingContext | WebGLRenderingContext | null {
       return this._backend.getContext();
     }

@@ -24,12 +24,8 @@ namespace gdjs {
           _webGPUDenoiseNode: any = null;
           _webGPUColor: any = null;
           _layerRenderer: gdjs.LayerRenderer | null = null;
-          _quality:
-            | 'Performance'
-            | 'Low'
-            | 'Medium'
-            | 'High'
-            | 'Ultra' = 'Performance';
+          _quality: 'Performance' | 'Low' | 'Medium' | 'High' | 'Ultra' =
+            'Performance';
           // In scene units: converted to the Three.js world units before each
           // rendering, as the world scale can change in the editor.
           _radius: float = 50;
