@@ -1288,8 +1288,12 @@ void ExporterHelper::AddLibsInclude(bool pixiRenderers,
     // compressed with Draco must be read.
     InsertUnique(resourcesFiles,
                  "pixi-renderers/draco/gltf/draco_decoder.wasm");
-    InsertUnique(resourcesFiles,
+        InsertUnique(resourcesFiles,
                  "pixi-renderers/draco/gltf/draco_wasm_wrapper.js");
+    // Not included with a script tag: `index.html` injects it with
+    // `document.write` when the WebGPU backend is selected, so it only
+    // needs to be copied next to the other runtime files.
+    InsertUnique(resourcesFiles, "pixi-renderers/three-webgpu.js");
     // Extensions in JS may use it.
     InsertUnique(includesFiles, "Extensions/3D/Scene3DTools.js");
     InsertUnique(includesFiles, "Extensions/3D/A_RuntimeObject3D.js");

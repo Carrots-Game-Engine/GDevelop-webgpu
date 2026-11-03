@@ -19,7 +19,8 @@ export default [
       {
         name: 'THREE',
         format: 'umd',
-        file: './dist/three.js',
+                file: './dist/three.js',
+        extend: true,
         sourcemap: true,
         // Skip execution when window.THREE is already set (three-webgpu.js loaded first).
         intro: 'if (typeof globalThis !== "undefined" && globalThis.THREE && globalThis.THREE.WebGPURenderer) { /* three-webgpu.js already loaded — skip */ } else {',
@@ -28,7 +29,8 @@ export default [
       {
         name: 'THREE',
         format: 'umd',
-        file: '../../GDJS/Runtime/pixi-renderers/three.js',
+                file: '../../GDJS/Runtime/pixi-renderers/three.js',
+        extend: true,
         sourcemap: false,
         intro: 'if (typeof globalThis !== "undefined" && globalThis.THREE && globalThis.THREE.WebGPURenderer) { /* three-webgpu.js already loaded — skip */ } else {',
         outro: '}',
