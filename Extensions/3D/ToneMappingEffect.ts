@@ -18,7 +18,7 @@ namespace gdjs {
   /**
    * The Three.js tone mapping constant matching a GDevelop tone mapping mode.
    * Read at call time because `THREE` may be either the WebGL or the WebGPU
-   * bundle (the WebGPU one is required for the TSL tone mapping node).
+   * bundle.
    */
   const getThreeToneMapping = (mode: ToneMappingMode): number => {
     switch (mode) {
@@ -66,6 +66,20 @@ namespace gdjs {
       }`,
   };
 
+  /**
+   * @returns true when the WebGPU (TSL) bundle is loaded, meaning:
+   * - the TSL tone mapping pass can be built;
+   * - the WebGL `ShaderPass` must NOT be built, because the WebGPU bundle
+   *   doesn't export the WebGL-only helpers it needs (`THREE.UniformsUtils`),
+   *   which would make its constructor throw.
+   */
+  const isWebGPUBundle = (): boolean => {
+    const threeApi = THREE as any;
+    return (
+      !!threeApi.TSL && typeof threeApi.TSL.uniform === 'function'
+    );
+  };
+
   gdjs.PixiFiltersTools.registerFilterCreator(
     'Scene3D::ToneMapping',
     new (class implements gdjs.PixiFiltersTools.FilterCreator {
@@ -77,30 +91,28 @@ namespace gdjs {
           return new gdjs.PixiFiltersTools.EmptyFilter();
         }
         return new (class implements gdjs.PixiFiltersTools.Filter {
-          shaderPass: THREE_ADDONS.ShaderPass;
+          /**
+           * The WebGL pass. `null` when the WebGPU bundle is loaded (its
+           * constructor would throw, see `isWebGPUBundle`).
+           */
+          shaderPass: THREE_ADDONS.ShaderPass | null = null;
           _isEnabled: boolean = false;
           _mode: ToneMappingMode = 'Neutral';
-          /** The current target, needed to rebuild the WebGPU pass on mode change. */
-          _target: EffectsTarget | null = null;
+          _exposure: float = 1.0;
+          /** The layer renderer currently using the effect, to rebuild the WebGPU pass on mode change. */
+          _layerRenderer: gdjs.LayerRenderer | null = null;
           /** The WebGPU (TSL) equivalent of the shader pass, when available. */
           _webGPUPass: gdjs.WebGPUPostProcessingPass | null = null;
           /** TSL uniform holding the exposure, so it can be updated without rebuilding. */
           _webGPUExposureUniform: any = null;
 
           constructor() {
-            this.shaderPass = new THREE_ADDONS.ShaderPass(toneMappingShader);
-
-            // Build the WebGPU (TSL) pass too, when the WebGPU bundle is
-            // loaded (`THREE.TSL` only exists there). The WebGL pipeline
-            // ignores it and the WebGPU pipeline ignores the shader pass, so
-            // both backends are covered by registering both.
-            const threeApi = THREE as any;
-            if (
-              threeApi.TSL &&
-              typeof threeApi.TSL.uniform === 'function'
-            ) {
-              this._webGPUExposureUniform = threeApi.TSL.uniform(
-                this.shaderPass.uniforms.exposure.value
+            // The WebGL pipeline ignores the WebGPU pass and the WebGPU
+            // pipeline ignores the shader pass, so both backends are covered
+            // by registering both (only the matching one is built).
+            if (isWebGPUBundle()) {
+              this._webGPUExposureUniform = (THREE as any).TSL.uniform(
+                this._exposure
               );
               this._webGPUPass = {
                 getOutputNode: (inputNode: any) =>
@@ -109,6 +121,11 @@ namespace gdjs {
                     this._webGPUExposureUniform
                   ),
               };
+            } else if (typeof THREE_ADDONS !== 'undefined') {
+              this.shaderPass = new THREE_ADDONS.ShaderPass(
+                toneMappingShader
+              );
+              this._exposure = this.shaderPass.uniforms.exposure.value;
             }
           }
 
@@ -129,12 +146,14 @@ namespace gdjs {
             if (!(target instanceof gdjs.Layer)) {
               return false;
             }
-            this._target = target;
             const layerRenderer = target.getRenderer();
-            layerRenderer.addPostProcessingPass(
-              this.shaderPass,
-              effectData.name
-            );
+            this._layerRenderer = layerRenderer;
+            if (this.shaderPass) {
+              layerRenderer.addPostProcessingPass(
+                this.shaderPass,
+                effectData.name
+              );
+            }
             if (this._webGPUPass) {
               layerRenderer.addPostProcessingPass(
                 this._webGPUPass,
@@ -148,9 +167,11 @@ namespace gdjs {
             if (!(target instanceof gdjs.Layer)) {
               return false;
             }
-            this._target = null;
+            this._layerRenderer = null;
             const layerRenderer = target.getRenderer();
-            layerRenderer.removePostProcessingPass(this.shaderPass);
+            if (this.shaderPass) {
+              layerRenderer.removePostProcessingPass(this.shaderPass);
+            }
             if (this._webGPUPass) {
               layerRenderer.removePostProcessingPass(this._webGPUPass);
             }
@@ -160,16 +181,18 @@ namespace gdjs {
           updatePreRender(target: gdjs.EffectsTarget): any {}
           updateDoubleParameter(parameterName: string, value: number): void {
             if (parameterName === 'exposure') {
-              const exposure = Math.max(0, value);
-              this.shaderPass.uniforms.exposure.value = exposure;
+              this._exposure = Math.max(0, value);
+              if (this.shaderPass) {
+                this.shaderPass.uniforms.exposure.value = this._exposure;
+              }
               if (this._webGPUExposureUniform) {
-                this._webGPUExposureUniform.value = exposure;
+                this._webGPUExposureUniform.value = this._exposure;
               }
             }
           }
           getDoubleParameter(parameterName: string): number {
             if (parameterName === 'exposure') {
-              return this.shaderPass.uniforms.exposure.value;
+              return this._exposure;
             }
             return 0;
           }
@@ -184,15 +207,16 @@ namespace gdjs {
             }
             this._mode = mode;
             // WebGL: the tone mapping function is a GLSL define.
-            this.shaderPass.material.defines.TONE_MAPPING_FUNCTION =
-              toneMappingFunctions[this._mode];
-            this.shaderPass.material.needsUpdate = true;
+            if (this.shaderPass) {
+              this.shaderPass.material.defines.TONE_MAPPING_FUNCTION =
+                toneMappingFunctions[this._mode];
+              this.shaderPass.material.needsUpdate = true;
+            }
             // WebGPU: the tone mapping mode is baked in the TSL node, so the
             // node chain must be rebuilt by re-registering the pass.
-            if (this._webGPUPass && this._target instanceof gdjs.Layer) {
-              const layerRenderer = this._target.getRenderer();
-              layerRenderer.removePostProcessingPass(this._webGPUPass);
-              layerRenderer.addPostProcessingPass(
+            if (this._webGPUPass && this._layerRenderer) {
+              this._layerRenderer.removePostProcessingPass(this._webGPUPass);
+              this._layerRenderer.addPostProcessingPass(
                 this._webGPUPass,
                 effectData.name
               );
@@ -206,7 +230,7 @@ namespace gdjs {
           getNetworkSyncData(): ToneMappingFilterNetworkSyncData {
             return {
               m: this._mode,
-              e: this.shaderPass.uniforms.exposure.value,
+              e: this._exposure,
             };
           }
           updateFromNetworkSyncData(data: ToneMappingFilterNetworkSyncData) {
