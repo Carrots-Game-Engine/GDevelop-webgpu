@@ -1,4 +1,4 @@
-!function(t,e){"object"==typeof exports&&"undefined"!=typeof module?e(exports):"function"==typeof define&&define.amd?define(["exports"],e):e((t="undefined"!=typeof globalThis?globalThis:t||self).THREE={})}(this,function(t){"use strict";if("undefined"!=typeof globalThis&&globalThis.THREE&&globalThis.THREE.WebGPURenderer);else{
+!function(t,e){"object"==typeof exports&&"undefined"!=typeof module?e(exports):"function"==typeof define&&define.amd?define(["exports"],e):e((t="undefined"!=typeof globalThis?globalThis:t||self).THREE=t.THREE||{})}(this,function(t){"use strict";if("undefined"!=typeof globalThis&&globalThis.THREE&&globalThis.THREE.WebGPURenderer);else{
 /**
 	 * @license
 	 * Copyright 2010-2026 Three.js Authors

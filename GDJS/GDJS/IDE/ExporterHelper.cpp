@@ -1179,6 +1179,16 @@ bool ExporterHelper::CompleteIndexFile(
             .FindAndReplace("<!-- GDJS_CODE_FILES -->", codeFilesIncludes)
             .FindAndReplace("{}/*GDJS_ADDITIONAL_SPEC*/", additionalSpec);
 
+  // Inject the URL the runtime files are served from, so that scripts loaded
+  // before GDJS_CODE_FILES (the Three.js backend selection in index.html) can
+  // load the WebGPU build even when runtime files are served from another
+  // origin (browser previews). Escaped for inclusion in a JS string literal.
+  gd::String runtimeFilesBaseUrl = GetExportedRuntimeFilesBaseUrl(fs, gdjsRoot)
+                                       .FindAndReplace("\\", "\\\\")
+                                       .FindAndReplace("\"", "\\\"");
+  str = str.FindAndReplace("__GDJS_RUNTIME_FILES_BASE_URL__",
+                           runtimeFilesBaseUrl);
+
   return true;
 }
 

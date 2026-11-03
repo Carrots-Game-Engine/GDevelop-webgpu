@@ -12,14 +12,16 @@ export default [
     // a global - like pixi.js and ThreeAddons.js.
     //
     // Guard: if three-webgpu.js already populated window.THREE (because the
-    // index.html backend-selection snippet ran first), skip this entire file
-    // to avoid overwriting the single-instance guarantee.
+    // index.html backend-selection snippet ran first), skip the bundle body.
+    // `extend: true` is required: the UMD wrapper must keep the existing
+    // window.THREE object instead of replacing it with a new empty one,
+    // otherwise the guard would run too late and THREE would be clobbered.
     input: './src/three.ts',
     output: [
       {
         name: 'THREE',
         format: 'umd',
-                file: './dist/three.js',
+        file: './dist/three.js',
         extend: true,
         sourcemap: true,
         // Skip execution when window.THREE is already set (three-webgpu.js loaded first).
@@ -29,7 +31,7 @@ export default [
       {
         name: 'THREE',
         format: 'umd',
-                file: '../../GDJS/Runtime/pixi-renderers/three.js',
+        file: '../../GDJS/Runtime/pixi-renderers/three.js',
         extend: true,
         sourcemap: false,
         intro: 'if (typeof globalThis !== "undefined" && globalThis.THREE && globalThis.THREE.WebGPURenderer) { /* three-webgpu.js already loaded — skip */ } else {',

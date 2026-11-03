@@ -72,34 +72,25 @@
       //
       // GDJS_CODE_FILES still contains a <script src="three.js"> tag injected
       // by ExporterHelper.  To avoid loading it a second time when backend is
-      // webgpu, the UMD wrapper in three.js assigns to window.THREE only when
-      // that global is not already set; we rely on that guard here.
+      // webgpu, the UMD wrapper in three.js only extends window.THREE when it
+      // is not already populated by the WebGPU build; we rely on that guard.
       // (Both files set globalThis.THREE via the UMD factory.)
       if (backend === 'webgpu') {
-        // Derive the base URL from the three.js script tag that ExporterHelper
-        // will inject — or fall back to a relative path for exported builds.
-        var threeBase = '';
-        try {
-          // In a preview, GDJS is served from an absolute URL (localhost:5002).
-          // Find the base by locating any existing pixi-renderers script, or
-          // use a path relative to the current document.
-          var scripts = document.getElementsByTagName('script');
-          for (var si = 0; si < scripts.length; si++) {
-            var src = scripts[si].src || '';
-            if (src.indexOf('pixi-renderers/') !== -1) {
-              threeBase = src.substring(0, src.indexOf('pixi-renderers/'));
-              break;
-            }
-          }
-        } catch(e) {}
+        // The base URL is injected by ExporterHelper (see CompleteIndexFile):
+        // it is "./" in exported games and the GDJS runtime server URL
+        // (e.g. "http://localhost:5002/Runtime/") in browser previews.
+        //
+        // Do NOT try to find it by scanning <script> tags: this snippet runs
+        // in <head> before GDJS_CODE_FILES is expanded, so no runtime script
+        // exists yet and a page-relative URL would be wrong in previews.
+        var threeBase = '__GDJS_RUNTIME_FILES_BASE_URL__';
         // document.write is synchronous: the browser will block further
         // parsing until three-webgpu.js is fetched and executed, which is
         // exactly what we need so that window.THREE is ready for all
         // subsequent scripts in GDJS_CODE_FILES.
-                        document.write(
+        document.write(
           '<script src="' + threeBase + 'pixi-renderers/three-webgpu.js"></' + 'script>'
         );
-        
       }
     })();
     </script>

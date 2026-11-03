@@ -1,0 +1,549 @@
+Running "shell:syncVersions" (shell) task
+ℹ️ VersionPriv.h is up to date.
+
+Running "mkdir:embuild" (mkdir) task
+Creating "../Binaries/embuild"...OK
+
+Running "shell:cmake" (shell) task
+configure: "C:\Program Files\CMake\bin\cmake" -G Ninja -DCMAKE_MAKE_PROGRAM=A:\GDevelop-webgpu\GDevelop.js\ninja\ninja.exe ../.. -DGDEVELOPJS_BUILD_VARIANT=release -DCMAKE_TOOLCHAIN_FILE=A:\emsdk\upstream\emscripten\cmake\Modules\Platform\Emscripten.cmake -DCMAKE_CROSSCOMPILING_EMULATOR=A:/emsdk/node/24.19.0_64bit/node.exe;--experimental-wasm-threads
+CMake Warning (deprecated) at CMakeLists.txt:4 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+-- CMAKE_BUILD_TYPE is empty, assuming build type is Release
+CMake Warning (deprecated) at Core/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+CMake Warning (deprecated) at GDJS/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+CMake Warning (deprecated) at GDevelop.js/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+CMake Warning (deprecated) at Extensions/CMakeLists.txt:4 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+CMake Warning (deprecated) at Extensions/3D/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+CMake Warning (deprecated) at Extensions/AnchorBehavior/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+CMake Warning (deprecated) at Extensions/DestroyOutsideBehavior/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+CMake Warning (deprecated) at Extensions/DraggableBehavior/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+CMake Warning (deprecated) at Extensions/Inventory/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+CMake Warning (deprecated) at Extensions/LinkedObjects/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+CMake Warning (deprecated) at Extensions/PanelSpriteObject/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+CMake Warning (deprecated) at Extensions/ParticleSystem/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+CMake Warning (deprecated) at Extensions/PathfindingBehavior/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+CMake Warning (deprecated) at Extensions/PhysicsBehavior/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+CMake Warning (deprecated) at Extensions/PlatformBehavior/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+CMake Warning (deprecated) at Extensions/PrimitiveDrawing/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+CMake Warning (deprecated) at Extensions/Shopify/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+CMake Warning (deprecated) at Extensions/SystemInfo/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+CMake Warning (deprecated) at Extensions/TextEntryObject/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+CMake Warning (deprecated) at Extensions/TextObject/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+CMake Warning (deprecated) at Extensions/TiledSpriteObject/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+CMake Warning (deprecated) at Extensions/Spine/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+CMake Warning (deprecated) at Extensions/TopDownMovementBehavior/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+-- Configuring done (1.5s)
+-- Generating done (0.4s)
+-- Build files have been written to: A:/GDevelop-webgpu/Binaries/embuild
+
+Running "newer:shell:updateGDBindings" (newer) task
+
+Running "shell:updateGDBindings" (shell) task
+
+Running "newer-postrun:shell:updateGDBindings:1:A:\GDevelop-webgpu\GDevelop.js\node_modules\grunt-newer\.cache" (newer-postrun) task
+
+Running "shell:make" (shell) task
+make: A:\GDevelop-webgpu\GDevelop.js\ninja\ninja.exe
+[1/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Builtin/AdvancedExtension.cpp.o
+[2/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Events/InstructionsList.cpp.o
+[3/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Events/Parsers/ExpressionParser2.cpp.o
+[4/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Events/CodeGeneration/EffectsCodeGenerator.cpp.o
+[5/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Events/EventsList.cpp.o
+[6/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Events/Serialization.cpp.o
+[7/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Events/Event.cpp.o
+[8/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Events/Builtin/LinkEvent.cpp.o
+[9/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Builtin/AsyncExtension.cpp.o
+[10/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Events/CodeGeneration/EventsCodeGenerator.cpp.o
+[11/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Builtin/AudioExtension.cpp.o
+[12/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Builtin/CameraExtension.cpp.o
+[13/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Builtin/Capabilities/EffectExtension.cpp.o
+[14/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Builtin/Capabilities/AnimatableExtension.cpp.o
+[15/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Builtin/Capabilities/FlippableExtension.cpp.o
+[16/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Builtin/Capabilities/OpacityExtension.cpp.o
+[17/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Builtin/CommonConversionsExtension.cpp.o
+[18/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Builtin/Capabilities/ScalableExtension.cpp.o
+[19/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Builtin/Capabilities/TextContainerExtension.cpp.o
+[20/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Builtin/Capabilities/ResizableExtension.cpp.o
+[21/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Events/CodeGeneration/ExpressionCodeGenerator.cpp.o
+[22/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Builtin/ExternalLayoutsExtension.cpp.o
+[23/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Builtin/FileExtension.cpp.o
+[24/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Builtin/CommonInstructionsExtension.cpp.o
+[25/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Builtin/KeyboardExtension.cpp.o
+[26/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Builtin/NetworkExtension.cpp.o
+[27/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Builtin/MathematicalToolsExtension.cpp.o
+[28/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Builtin/MouseExtension.cpp.o
+[29/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Builtin/SceneExtension.cpp.o
+[30/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Builtin/BaseObjectExtension.cpp.o
+[31/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Builtin/StringInstructionsExtension.cpp.o
+[32/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Builtin/SpriteExtension/SpriteExtension.cpp.o
+[33/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Builtin/TimeExtension.cpp.o
+[34/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Builtin/SpriteExtension/SpriteAnimationList.cpp.o
+[35/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Builtin/WindowExtension.cpp.o
+[36/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Builtin/SpriteExtension/SpriteObject.cpp.o
+[37/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Metadata/ExpressionMetadata.cpp.o
+[38/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Builtin/VariablesExtension.cpp.o
+[39/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Metadata/BehaviorMetadata.cpp.o
+[40/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Metadata/InstructionMetadata.cpp.o
+[41/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Metadata/MetadataProvider.cpp.o
+[42/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Metadata/ObjectMetadata.cpp.o
+[43/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Platform.cpp.o
+[44/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/DependenciesAnalyzer.cpp.o
+[45/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/EventBasedBehaviorBrowser.cpp.o
+[46/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/Metadata/ParameterMetadataTools.cpp.o
+[47/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Events/BehaviorPropertyRenamer.cpp.o
+[48/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/EventBasedObjectBrowser.cpp.o
+[49/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Events/BehaviorTypeRenamer.cpp.o
+[50/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Events/CustomObjectVariantResetter.cpp.o
+[51/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Events/CustomObjectTypeRenamer.cpp.o
+[52/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Extensions/PlatformExtension.cpp.o
+[53/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Events/BehaviorDefaultFlagClearer.cpp.o
+[54/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Events/EventsBehaviorRenamer.cpp.o
+[55/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Events/EventsFunctionSelfCallChecker.cpp.o
+[56/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Events/EventsIdentifiersFinder.cpp.o
+[57/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Events/EventsParametersLister.cpp.o
+[58/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Events/EventsTypesLister.cpp.o
+[59/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Events/EventsParameterReplacer.cpp.o
+[60/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Events/EventsContextAnalyzer.cpp.o
+[61/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Events/EventsVariableInstructionTypeSwitcher.cpp.o
+[62/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Events/EventsPropertyReplacer.cpp.o
+[63/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Events/EventsVariablesFinder.cpp.o
+[64/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Events/ExpressionsParameterMover.cpp.o
+[65/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Events/EventsVariableReplacer.cpp.o
+[66/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Events/ExtensionDependencyCache.cpp.o
+[67/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Events/InstructionsCountEvaluator.cpp.o
+[68/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Events/InstructionsParameterMover.cpp.o
+[69/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Events/ExpressionsRenamer.cpp.o
+[70/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Events/ExpressionTypeFinder.cpp.o
+[71/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Events/EventsRefactorer.cpp.o
+[72/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Events/ExampleExtensionUsagesFinder.cpp.o
+[73/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Events/InstructionsTypeRenamer.cpp.o
+[74/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Events/LeaderboardIdRenamer.cpp.o
+[75/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Events/ObjectPropertyRenamer.cpp.o
+[76/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Events/UsedObjectTypeFinder.cpp.o
+[77/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Events/LinkEventTargetRenamer.cpp.o
+[78/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/EventsBasedObjectVariantHelper.cpp.o
+[79/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Events/ProjectElementRenamer.cpp.o
+[80/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/EventsFunctionTools.cpp.o
+[81/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/EventsFunctionsExtensionBrowser.cpp.o
+[82/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/ExtensionsLoader.cpp.o
+[83/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/ExtensionEditor/EventsFunctionsExtensionExtractor.cpp.o
+[84/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/ExtensionEditor/PropertyFunctionGenerator.cpp.o
+[85/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/ExtensionEditor/ChildObjectForwardFunctionGenerator.cpp.o
+[86/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Events/UsedExtensionsFinder.cpp.o
+[87/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Project/AssetResourcePathCleaner.cpp.o
+[88/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Project/EventsBasedObjectDependencyFinder.cpp.o
+[89/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/ObjectAssetSerializer.cpp.o
+[90/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Project/ObjectsUsingResourceCollector.cpp.o
+[91/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Project/ArbitraryResourceWorker.cpp.o
+[92/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Project/ProjectResourcesCopier.cpp.o
+[93/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Project/ProjectResourcesAdder.cpp.o
+[94/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/Project/SceneResourcesFinder.cpp.o
+[95/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/ProjectStripper.cpp.o
+[96/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/WholeProjectBrowser.cpp.o
+[97/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/ProjectBrowserHelper.cpp.o
+[98/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/ResourceExposer.cpp.o
+[99/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Project/CustomBehaviorsSharedData.cpp.o
+[100/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Project/CustomBehavior.cpp.o
+[101/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Project/CustomConfigurationHelper.cpp.o
+[102/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Project/BehaviorsContainer.cpp.o
+[103/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Project/ExtensionProperties.cpp.o
+[104/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/IDE/WholeProjectRefactorer.cpp.o
+[105/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Project/ObjectConfiguration.cpp.o
+[106/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Project/CustomObjectConfiguration.cpp.o
+[107/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Project/InitialInstance.cpp.o
+[108/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Project/EventsFunctionsExtension.cpp.o
+[109/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Project/Layout.cpp.o
+[110/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Project/ObjectsContainer.cpp.o
+[111/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Project/Object.cpp.o
+[112/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Project/ObjectsContainersList.cpp.o
+[113/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Tools/VersionWrapper.cpp.o
+[114/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Project/ResourcesContainer.cpp.o
+[115/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Project/VariablesContainersList.cpp.o
+[116/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Project/ResourcesContainersList.cpp.o
+[117/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Project/ProjectScopedContainers.cpp.o
+[118/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/BehaviorSerialization.cpp.o
+[119/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/BehaviorNetworkSynchronization.cpp.o
+[120/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/DependenciesAnalyzer.cpp.o
+[121/270] Building CXX object Core/CMakeFiles/GDCore.dir/GDCore/Project/Project.cpp.o
+[122/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/Common.cpp.o
+[123/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/ChildObjectForwardFunctionGenerator.cpp.o
+[124/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/ArbitraryResourceWorker.cpp.o
+[125/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/Events.cpp.o
+[126/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/EventsBehaviorRenamer.cpp.o
+[127/270] Linking CXX static library A:\GDevelop-webgpu\Binaries\Output\Release_Emscripten\libGDCore.bc
+[128/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/EventsBasedObjectVariantHelper.cpp.o
+[129/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/EventsCodeGenerationContext.cpp.o
+[130/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/EventsCodeGenerator.cpp.o
+[131/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/EventsFunction.cpp.o
+[132/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/DummyPlatform.cpp.o
+[133/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/EventsExtension.cpp.o
+[134/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/EventsFunctionsContainer.cpp.o
+[135/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/EventsFunctionsExtension.cpp.o
+[136/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/EventsIdentifiersFinder.cpp.o
+[137/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/EventsVariablesFinder.cpp.o
+[138/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/ExpressionNodeLocationFinder.cpp.o
+[139/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/ExpressionParser2Benchmarks.cpp.o
+[140/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/ExpressionParser2NodePrinter.cpp.o
+[141/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/InstructionCountEvaluator.cpp.o
+[142/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/InitialInstance.cpp.o
+[143/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/ExpressionParser2NaugtyStrings.cpp.o
+[144/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/ExpressionSyntaxColoringHelper.cpp.o
+[145/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/ExpressionCodeGenerator.cpp.o
+[146/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/Object.cpp.o
+[147/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/InstructionsParameterMover.cpp.o
+[148/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/ObjectAssetSerializer.cpp.o
+[149/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/ObjectsContainer.cpp.o
+[150/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/ObjectSerialization.cpp.o
+[151/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/NamedEasingsContainer.cpp.o
+[152/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/ProjectItemFolderOrItem.cpp.o
+[153/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/Project-EnsureObjectDefaultBehaviors.cpp.o
+[154/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/ObjectsContainersList.cpp.o
+[155/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/Resources.cpp.o
+[156/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/ExpressionCompletionFinder.cpp.o
+[157/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/ResourcesMergingHelper.cpp.o
+[158/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/PropertyFunctionGenerator.cpp.o
+[159/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/ProjectScopedContainers-NamedEasings.cpp.o
+[160/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/ResourcesRenamer.cpp.o
+[161/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/Serializer.cpp.o
+[162/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/TestsContainer.cpp.o
+[163/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/UsedExtensionsFinder.cpp.o
+[164/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Events/Builtin/JsCodeEvent.cpp.o
+[165/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Events/CodeGeneration/BehaviorCodeGenerator.cpp.o
+[166/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/IDE/Exporter.cpp.o
+[167/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Events/CodeGeneration/ObjectCodeGenerator.cpp.o
+[168/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Events/CodeGeneration/EventsCodeGenerator.cpp.o
+[169/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Extensions/Builtin/AdvancedExtension.cpp.o
+[170/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Extensions/Builtin/AsyncExtension.cpp.o
+[171/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Extensions/Builtin/AudioExtension.cpp.o
+[172/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/IDE/ExporterHelper.cpp.o
+[173/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/WholeProjectRefactorer-ApplyRefactoringForVariablesContainer.cpp.o
+[174/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Events/CodeGeneration/MetadataDeclarationHelper.cpp.o
+[175/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Extensions/Builtin/CameraExtension.cpp.o
+[176/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Extensions/Builtin/Capacities/AnimatableExtension.cpp.o
+[177/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Extensions/Builtin/Capacities/ResizableExtension.cpp.o
+[178/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Extensions/Builtin/BaseObjectExtension.cpp.o
+[179/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Extensions/Builtin/Capacities/FlippableExtension.cpp.o
+[180/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Extensions/Builtin/Capacities/OpacityExtension.cpp.o
+[181/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Extensions/Builtin/Capacities/EffectExtension.cpp.o
+[182/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Extensions/Builtin/Capacities/ScalableExtension.cpp.o
+[183/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Extensions/Builtin/Capacities/TextContainerExtension.cpp.o
+[184/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Extensions/Builtin/CommonConversionsExtension.cpp.o
+[185/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Extensions/Builtin/KeyboardExtension.cpp.o
+[186/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Extensions/Builtin/MathematicalToolsExtension.cpp.o
+[187/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Extensions/Builtin/MouseExtension.cpp.o
+[188/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Extensions/Builtin/FileExtension.cpp.o
+[189/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Extensions/Builtin/ExternalLayoutsExtension.cpp.o
+[190/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Extensions/Builtin/NetworkExtension.cpp.o
+[191/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/WholeProjectRefactorer.cpp.o
+A:/GDevelop-webgpu/Core/tests/WholeProjectRefactorer.cpp:62:1: warning: unused function 'AreActionsEmpty' [-Wunused-function]
+AreActionsEmpty(const gd::BaseEvent &event) {
+^
+1 warning generated.
+[192/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Extensions/Builtin/SceneExtension.cpp.o
+[193/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Extensions/Builtin/TimeExtension.cpp.o
+[194/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Extensions/Builtin/SpriteExtension.cpp.o
+[195/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Extensions/Builtin/StringInstructionsExtension.cpp.o
+[196/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Extensions/Builtin/WindowExtension.cpp.o
+[197/270] Building CXX object GDevelop.js/CMakeFiles/GD.dir/Bindings/BehaviorJsImplementation.cpp.o
+[198/270] Building CXX object GDevelop.js/CMakeFiles/GD.dir/Bindings/BehaviorSharedDataJsImplementation.cpp.o
+[199/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Extensions/Builtin/CommonInstructionsExtension.cpp.o
+[200/270] Building CXX object GDevelop.js/CMakeFiles/GD.dir/Bindings/ObjectJsImplementation.cpp.o
+[201/270] Building CXX object Extensions/AnchorBehavior/CMakeFiles/AnchorBehavior.dir/Extension.cpp.o
+[202/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Extensions/JsPlatform.cpp.o
+[203/270] Building CXX object GDJS/CMakeFiles/GDJS.dir/GDJS/Extensions/Builtin/VariablesExtension.cpp.o
+[204/270] Building CXX object Extensions/AnchorBehavior/CMakeFiles/AnchorBehavior.dir/JsExtension.cpp.o
+[205/270] Building CXX object Extensions/DestroyOutsideBehavior/CMakeFiles/DestroyOutsideBehavior.dir/Extension.cpp.o
+[206/270] Building CXX object Extensions/DestroyOutsideBehavior/CMakeFiles/DestroyOutsideBehavior.dir/JsExtension.cpp.o
+[207/270] Linking CXX static library A:\GDevelop-webgpu\Binaries\Output\Release_Emscripten\CppPlatform\Extensions\AnchorBehavior.bc
+[208/270] Building CXX object Extensions/3D/CMakeFiles/Scene3D.dir/Model3DObjectConfiguration.cpp.o
+[209/270] Linking CXX static library A:\GDevelop-webgpu\Binaries\Output\Release_Emscripten\CppPlatform\Extensions\DestroyOutsideBehavior.bc
+[210/270] Linking CXX static library A:\GDevelop-webgpu\Binaries\Output\Release_Emscripten\JsPlatform\libGDJS.bc
+[211/270] Building CXX object Extensions/DraggableBehavior/CMakeFiles/DraggableBehavior.dir/Extension.cpp.o
+[212/270] Linking CXX static library A:\GDevelop-webgpu\Binaries\Output\Release_Emscripten\CppPlatform\Extensions\Scene3D.bc
+[213/270] Building CXX object Extensions/DraggableBehavior/CMakeFiles/DraggableBehavior.dir/JsExtension.cpp.o
+[214/270] Building CXX object Extensions/Inventory/CMakeFiles/Inventory.dir/Extension.cpp.o
+[215/270] Building CXX object Extensions/Inventory/CMakeFiles/Inventory.dir/JsExtension.cpp.o
+[216/270] Linking CXX static library A:\GDevelop-webgpu\Binaries\Output\Release_Emscripten\CppPlatform\Extensions\DraggableBehavior.bc
+[217/270] Linking CXX static library A:\GDevelop-webgpu\Binaries\Output\Release_Emscripten\CppPlatform\Extensions\Inventory.bc
+[218/270] Building CXX object Extensions/LinkedObjects/CMakeFiles/LinkedObjects.dir/Extension.cpp.o
+[219/270] Building CXX object Extensions/LinkedObjects/CMakeFiles/LinkedObjects.dir/JsExtension.cpp.o
+[220/270] Building CXX object Extensions/PanelSpriteObject/CMakeFiles/PanelSpriteObject.dir/JsExtension.cpp.o
+[221/270] Linking CXX static library A:\GDevelop-webgpu\Binaries\Output\Release_Emscripten\CppPlatform\Extensions\LinkedObjects.bc
+[222/270] Building CXX object Extensions/PanelSpriteObject/CMakeFiles/PanelSpriteObject.dir/Extension.cpp.o
+[223/270] Building CXX object Extensions/ParticleSystem/CMakeFiles/ParticleSystem.dir/Extension.cpp.o
+[224/270] Building CXX object Extensions/ParticleSystem/CMakeFiles/ParticleSystem.dir/ExtensionSubDeclaration3.cpp.o
+[225/270] Building CXX object Extensions/ParticleSystem/CMakeFiles/ParticleSystem.dir/ExtensionSubDeclaration1.cpp.o
+[226/270] Building CXX object Extensions/ParticleSystem/CMakeFiles/ParticleSystem.dir/ExtensionSubDeclaration2.cpp.o
+[227/270] Building CXX object Extensions/PanelSpriteObject/CMakeFiles/PanelSpriteObject.dir/PanelSpriteObject.cpp.o
+[228/270] Building CXX object Core/CMakeFiles/GDCore_tests.dir/tests/ExpressionParser2.cpp.o
+[229/270] Building CXX object Extensions/ParticleSystem/CMakeFiles/ParticleSystem.dir/JsExtension.cpp.o
+[230/270] Linking CXX static library A:\GDevelop-webgpu\Binaries\Output\Release_Emscripten\CppPlatform\Extensions\PanelSpriteObject.bc
+[231/270] Building CXX object Extensions/PathfindingBehavior/CMakeFiles/PathfindingBehavior.dir/JsExtension.cpp.o
+[232/270] Building CXX object Extensions/ParticleSystem/CMakeFiles/ParticleSystem.dir/ParticleEmitterObject.cpp.o
+[233/270] Building CXX object Extensions/PathfindingBehavior/CMakeFiles/PathfindingBehavior.dir/Extension.cpp.o
+[234/270] Building CXX object Extensions/PhysicsBehavior/CMakeFiles/PhysicsBehavior.dir/PhysicsBehavior.cpp.o
+[235/270] Building CXX object Extensions/PhysicsBehavior/CMakeFiles/PhysicsBehavior.dir/JsExtension.cpp.o
+[236/270] Linking CXX static library A:\GDevelop-webgpu\Binaries\Output\Release_Emscripten\CppPlatform\Extensions\ParticleSystem.bc
+[237/270] Building CXX object Extensions/PhysicsBehavior/CMakeFiles/PhysicsBehavior.dir/Extension.cpp.o
+[238/270] Linking CXX static library A:\GDevelop-webgpu\Binaries\Output\Release_Emscripten\CppPlatform\Extensions\PathfindingBehavior.bc
+[239/270] Building CXX object Extensions/PhysicsBehavior/CMakeFiles/PhysicsBehavior.dir/ScenePhysicsDatas.cpp.o
+[240/270] Building CXX object Extensions/PlatformBehavior/CMakeFiles/PlatformBehavior.dir/JsExtension.cpp.o
+[241/270] Building CXX object Extensions/PlatformBehavior/CMakeFiles/PlatformBehavior.dir/Extension.cpp.o
+[242/270] Linking CXX static library A:\GDevelop-webgpu\Binaries\Output\Release_Emscripten\CppPlatform\Extensions\PhysicsBehavior.bc
+[243/270] Building CXX object Extensions/PrimitiveDrawing/CMakeFiles/PrimitiveDrawing.dir/JsExtension.cpp.o
+[244/270] Building CXX object Extensions/Shopify/CMakeFiles/Shopify.dir/JsExtension.cpp.o
+[245/270] Linking CXX static library A:\GDevelop-webgpu\Binaries\Output\Release_Emscripten\CppPlatform\Extensions\PlatformBehavior.bc
+[246/270] Building CXX object Extensions/SystemInfo/CMakeFiles/SystemInfo.dir/Extension.cpp.o
+[247/270] Building CXX object Extensions/PrimitiveDrawing/CMakeFiles/PrimitiveDrawing.dir/ShapePainterObject.cpp.o
+[248/270] Linking CXX static library A:\GDevelop-webgpu\Binaries\Output\Release_Emscripten\JsPlatform\Extensions\Shopify.bc
+[249/270] Building CXX object Extensions/PrimitiveDrawing/CMakeFiles/PrimitiveDrawing.dir/Extension.cpp.o
+[250/270] Building CXX object Extensions/SystemInfo/CMakeFiles/SystemInfo.dir/JsExtension.cpp.o
+[251/270] Building CXX object Extensions/TextEntryObject/CMakeFiles/TextEntryObject.dir/JsExtension.cpp.o
+[252/270] Linking CXX static library A:\GDevelop-webgpu\Binaries\Output\Release_Emscripten\CppPlatform\Extensions\PrimitiveDrawing.bc
+[253/270] Linking CXX static library A:\GDevelop-webgpu\Binaries\Output\Release_Emscripten\CppPlatform\Extensions\SystemInfo.bc
+[254/270] Building CXX object Extensions/TextEntryObject/CMakeFiles/TextEntryObject.dir/Extension.cpp.o
+[255/270] Building CXX object GDevelop.js/CMakeFiles/GD.dir/Bindings/Wrapper.cpp.o
+[256/270] Linking CXX static library A:\GDevelop-webgpu\Binaries\Output\Release_Emscripten\CppPlatform\Extensions\TextEntryObject.bc
+[257/270] Building CXX object Extensions/TiledSpriteObject/CMakeFiles/TiledSpriteObject.dir/JsExtension.cpp.o
+[258/270] Building CXX object Extensions/TextObject/CMakeFiles/TextObject.dir/JsExtension.cpp.o
+[259/270] Building CXX object Extensions/TiledSpriteObject/CMakeFiles/TiledSpriteObject.dir/Extension.cpp.o
+[260/270] Building CXX object Extensions/TextObject/CMakeFiles/TextObject.dir/Extension.cpp.o
+[261/270] Linking CXX static library A:\GDevelop-webgpu\Binaries\Output\Release_Emscripten\CppPlatform\Extensions\TextObject.bc
+[262/270] Building CXX object Extensions/TopDownMovementBehavior/CMakeFiles/TopDownMovementBehavior.dir/JsExtension.cpp.o
+[263/270] Building CXX object Extensions/TiledSpriteObject/CMakeFiles/TiledSpriteObject.dir/TiledSpriteObject.cpp.o
+[264/270] Building CXX object Extensions/TopDownMovementBehavior/CMakeFiles/TopDownMovementBehavior.dir/Extension.cpp.o
+[265/270] Linking CXX static library A:\GDevelop-webgpu\Binaries\Output\Release_Emscripten\CppPlatform\Extensions\TiledSpriteObject.bc
+[266/270] Building CXX object Extensions/Spine/CMakeFiles/SpineObject.dir/SpineObjectConfiguration.cpp.o
+[267/270] Linking CXX static library A:\GDevelop-webgpu\Binaries\Output\Release_Emscripten\CppPlatform\Extensions\TopDownMovementBehavior.bc
+[268/270] Linking CXX static library A:\GDevelop-webgpu\Binaries\Output\Release_Emscripten\CppPlatform\Extensions\SpineObject.bc
+[269/270] Linking CXX executable Core\GDCore_tests.js
+[270/270] Linking CXX executable GDevelop.js\libGD.js
+
+Running "shell:copyToNewIDE" (shell) task
+✅ Copied libGD.wasm from Binaries/embuild/GDevelop.js to public and node_modules folders of newIDE/app.
+✅ Copied libGD.js from Binaries/embuild/GDevelop.js to public and node_modules folders of newIDE/app.
+
+Running "shell:generateFlowTypes" (shell) task
+info: Sourcing gdevelopjs-cleaned-bindings-idlOEJOuy\Bindings.idl
+(node:15716) [DEP0180] DeprecationWarning: fs.Stats constructor is deprecated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+✅ Properly generated GDevelop.js types.
+
+Running "shell:generateTSTypes" (shell) task
+
+Done.
