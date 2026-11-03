@@ -355,7 +355,18 @@ namespace gdjs {
       this._antialiasingMode = this._data.properties.antialiasingMode;
       this._isAntialisingEnabledOnMobile =
         this._data.properties.antialisingEnabledOnMobile;
-      this._threeBackend = this._data.properties.threeBackend || 'webgl';
+            // URL param has priority (dev override and WebGL fallback after a failed WebGPU init).
+      let threeBackend: 'webgl' | 'webgpu' =
+        this._data.properties.threeBackend === 'webgpu' ? 'webgpu' : 'webgl';
+      try {
+        const urlBackend = new URLSearchParams(window.location.search).get(
+          'threeBackend'
+        );
+        if (urlBackend === 'webgpu' || urlBackend === 'webgl') {
+          threeBackend = urlBackend;
+        }
+      } catch (e) {}
+      this._threeBackend = threeBackend;
 
       this._renderer = new gdjs.RuntimeGameRenderer(
         this,
@@ -2099,9 +2110,13 @@ namespace gdjs {
   export class WebGPUBackend implements IThreeBackend {
     private _renderer: THREE.WebGPURenderer | null = null;
     private _gpuReady: boolean = false;
-    private _initPromise: Promise<void> | null = null;
+        private _initPromise: Promise<void> | null = null;
+    private _pendingWidth: integer = 0;
+    private _pendingHeight: integer = 0;
 
     init(options: ThreeRendererAdapterOptions): boolean {
+      this._pendingWidth = options.width;
+      this._pendingHeight = options.height;
       if (this._renderer) {
         _threeAdapterLogger.error(
           'WebGPUBackend.init() called while a renderer already exists. Call dispose() first.'
@@ -2136,9 +2151,9 @@ namespace gdjs {
         this._renderer = null;
         return false;
       }
-      this._renderer.shadowMap.enabled = true;
+            this._renderer.shadowMap.enabled = true;
       this._renderer.autoClear = false;
-      this._renderer.setSize(options.width, options.height);
+      // setSize() must wait for `await renderer.init()`: see initAsync().
       return true;
     }
 
@@ -2181,9 +2196,13 @@ namespace gdjs {
       (this._renderer as any).render(scene, camera);
     }
 
-    resize(width: integer, height: integer): void {
-      if (!this._renderer) return;
-      this._renderer.setSize(width, height);
+        resize(width: integer, height: integer): void {
+      // Remember the size: initAsync() applies it once the GPU is ready.
+      this._pendingWidth = width;
+      this._pendingHeight = height;
+      if (!this._renderer || !this._gpuReady) return;
+      // false = don't touch canvas.style: the game renderer owns the CSS size.
+      (this._renderer as any).setSize(width, height, false);
     }
 
     resetState(): void {
@@ -2276,7 +2295,7 @@ namespace gdjs {
       return this._backend.init(options);
     }
 
-    /**
+        /**
      * Start the async GPU acquisition (WebGPU only; WebGL returns immediately).
      * Call this right after `init()` and before the first scene loads.
      * Frames are silently skipped until `isGpuReady()` returns true.

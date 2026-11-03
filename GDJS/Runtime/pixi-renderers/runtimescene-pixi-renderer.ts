@@ -297,13 +297,14 @@ namespace gdjs {
 
         // Uncomment to display some debug metrics from Three.js.
         // console.log(threeRenderer.info);
-      } else if (webGPURenderer) {
-        // ── WebGPU 3D rendering path ──────────────────────────────────────
-        // WebGPURenderer replaces WebGLRenderer entirely.
-        // No shared context with PixiJS, no resetState(), no EffectComposer
-        // (WebGL-only). 2D+3D layers render 3D only for now; full 2D
-        // compositing via WebGPU will be addressed separately.
-
+            } else if (webGPURenderer) {
+        // WebGPU: 3D goes to its own canvas (below), 2D goes to the transparent
+        // Pixi canvas (above). The layer interleaving 2D/3D is not preserved yet.
+        const renderer = webGPURenderer as any;
+        if (!this._backgroundColor) {
+          this._backgroundColor = new THREE.Color();
+        }
+        this._backgroundColor.set(backgroundColor);
         let isFirstRender = true;
 
         for (let i = 0; i < this._runtimeScene._orderedLayers.length; ++i) {
@@ -317,29 +318,37 @@ namespace gdjs {
           if (!threeScene || !threeCamera) continue;
 
           if (isFirstRender) {
-            (webGPURenderer as any).setClearColor(backgroundColor);
-            if (shouldClearCanvas) (webGPURenderer as any).clear();
-            if (!this._backgroundColor) {
-              this._backgroundColor = new THREE.Color();
-            }
-            this._backgroundColor.set(backgroundColor);
+            renderer.setClearColor(backgroundColor);
+            if (shouldClearCanvas) renderer.clear();
             if (!threeScene.background) {
               threeScene.background = this._backgroundColor;
             }
             isFirstRender = false;
-          } else {
-            if (threeScene.background === this._backgroundColor) {
-              threeScene.background = null;
-            }
+          } else if (threeScene.background === this._backgroundColor) {
+            threeScene.background = null;
           }
 
-          (webGPURenderer as any).clearDepth();
-          // Route through the adapter so WebGPUBackend.render() handles
-          // the _gpuReady guard internally.
+          renderer.clearDepth();
           threeAdapter!.render(threeScene, threeCamera);
-
           this._layerRenderingMetrics.rendered3DLayersCount++;
         }
+
+        if (isFirstRender && shouldClearCanvas) {
+          // No 3D layer: still show the background color on the 3D canvas.
+          renderer.setClearColor(backgroundColor);
+          renderer.clear();
+        }
+
+        // 2D: all layers (the 2D objects of 2D+3D layers included) on the
+        // transparent Pixi canvas, above the 3D one.
+        for (const runtimeLayer of this._runtimeScene._orderedLayers) {
+          if (runtimeLayer.isLightingLayer()) {
+            runtimeLayer.getRenderer().renderOnPixiRenderTexture(pixiRenderer);
+          }
+        }
+        pixiRenderer.background.alpha = 0;
+        pixiRenderer.render(this._pixiContainer, { clear: true });
+        this._layerRenderingMetrics.rendered2DLayersCount++;
       } else {
         // 2D only rendering.
 

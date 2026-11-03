@@ -96,9 +96,10 @@
         // parsing until three-webgpu.js is fetched and executed, which is
         // exactly what we need so that window.THREE is ready for all
         // subsequent scripts in GDJS_CODE_FILES.
-        document.write(
-          '<script src="' + threeBase + 'pixi-renderers/three-webgpu.js"><\\/script>'
+                        document.write(
+          '<script src="' + threeBase + 'pixi-renderers/three-webgpu.js"></' + 'script>'
         );
+        
       }
     })();
     </script>

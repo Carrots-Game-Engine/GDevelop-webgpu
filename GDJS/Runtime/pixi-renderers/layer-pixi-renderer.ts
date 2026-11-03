@@ -692,9 +692,15 @@ namespace gdjs {
             }
           }
 
+                    // The 2D plane uses a GLSL ShaderMaterial, not supported by WebGPU:
+          // there, the 2D objects are drawn by Pixi on top of the 3D canvas.
+          const isWebGPUBackend =
+            this._runtimeGameRenderer.getThreeAdapter()?.getBackendType() ===
+            'webgpu';
           if (
+            !isWebGPUBackend &&
             this._layer.getRenderingType() ===
-            gdjs.RuntimeLayerRenderingType.TWO_D_PLUS_THREE_D
+              gdjs.RuntimeLayerRenderingType.TWO_D_PLUS_THREE_D
           ) {
             if (
               this._renderTexture ||

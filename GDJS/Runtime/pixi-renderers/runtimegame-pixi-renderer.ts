@@ -44,6 +44,8 @@ namespace gdjs {
 
     _pixiRenderer: PIXI.Renderer | null = null;
     private _threeAdapter: gdjs.ThreeRendererAdapter | null = null;
+    /** WebGPU only: separate canvas for Three.js, displayed under the Pixi canvas. */
+    private _threeCanvas: HTMLCanvasElement | null = null;
     private _gameCanvas: HTMLCanvasElement | null = null;
     private _domElementsContainer: HTMLDivElement | null = null;
 
@@ -101,7 +103,7 @@ namespace gdjs {
      *
      * In most cases, you can use `createStandardCanvas` instead to initialize the game.
      */
-    initializeRenderers(gameCanvas: HTMLCanvasElement): void {
+        initializeRenderers(gameCanvas: HTMLCanvasElement): void {
       this._throwIfDisposed();
 
       // Check WebGL2 support on a separate canvas: getting a context on the game
@@ -111,10 +113,24 @@ namespace gdjs {
         typeof THREE !== 'undefined' &&
         document.createElement('canvas').getContext('webgl2')
       ) {
-        const backendType = this._game.getThreeBackend();
-        const adapter = new gdjs.ThreeRendererAdapter(backendType);
+        const adapter = new gdjs.ThreeRendererAdapter(
+          this._game.getThreeBackend()
+        );
+        const isWebGPU = adapter.getBackendType() === 'webgpu';
+
+        // A canvas holds a single context type: Pixi (WebGL) keeps `gameCanvas`,
+        // WebGPU gets its own transparent-free canvas placed UNDER it.
+        let threeCanvas = gameCanvas;
+        if (isWebGPU) {
+          threeCanvas = document.createElement('canvas');
+          threeCanvas.style.position = 'absolute';
+          threeCanvas.style.pointerEvents = 'none';
+          threeCanvas.style.userSelect = 'none';
+          gameCanvas.parentNode?.insertBefore(threeCanvas, gameCanvas);
+        }
+
         const ok = adapter.init({
-          canvas: gameCanvas,
+          canvas: threeCanvas,
           stencil: true,
           antialias:
             this._game.getAntialiasingMode() !== 'none' &&
@@ -127,19 +143,11 @@ namespace gdjs {
         });
         if (ok) {
           this._threeAdapter = adapter;
-          // For WebGPU: start async GPU acquisition in the background.
-          // WebGL resolves this immediately.  Frames will be silently skipped
-          // until isGpuReady() returns true (the loading screen covers this gap).
+          if (isWebGPU) this._threeCanvas = threeCanvas;
           adapter.initAsync().catch((err) => {
             logger.error('ThreeRendererAdapter.initAsync() failed:', err);
-            // If WebGPU acquisition failed and we are not already in WebGL
-            // fallback mode, reload the page forcing WebGL so the game works.
-            // We read window.__gdThreeBackend (set by the inline snippet in
-            // index.html) rather than re-parsing the URL, so the value is
-            // always consistent with what the snippet decided.
             try {
-              // Guard against reload loops: only reload if the current session
-              // is genuinely in webgpu mode (not already a webgl fallback run).
+              // Reload loop guard: only when this session really is webgpu.
               const currentBackend =
                 (window as any).__gdThreeBackend || 'webgl';
               if (currentBackend === 'webgpu') {
@@ -154,13 +162,12 @@ namespace gdjs {
             }
           });
         } else {
-          // The context creation can still fail, for example with software
-          // rendering running out of resources: fall back to 2D rendering.
+          if (isWebGPU) threeCanvas.parentNode?.removeChild(threeCanvas);
           this._threeAdapter = null;
         }
       }
 
-      if (this._threeAdapter) {
+      if (this._threeAdapter && this._threeAdapter.getContext()) {
         // Create a PixiJS renderer that use the same GL context as Three.js
         // so that both can render to the canvas and even have PixiJS rendering
         // reused in Three.js (by using a RenderTexture and the same internal WebGL texture).
@@ -177,17 +184,19 @@ namespace gdjs {
           // TODO (3D): add a setting for pixel ratio (`resolution: window.devicePixelRatio`)
         });
       } else {
-        // Create the renderer and setup the rendering area.
-        // "preserveDrawingBuffer: true" is needed to avoid flickering
-        // and background issues on some mobile phones (see #585 #572 #566 #463).
+        // 2D only, or WebGPU (Three has its own canvas below this one, so
+        // Pixi must be transparent to let the 3D show through).
+        const isOverWebGPUCanvas = !!this._threeCanvas;
         this._pixiRenderer = PIXI.autoDetectRenderer({
           width: this._game.getGameResolutionWidth(),
           height: this._game.getGameResolutionHeight(),
           view: gameCanvas,
           preserveDrawingBuffer: true,
           antialias: false,
-          // Ask for the discrete graphics card, if any.
           powerPreference: 'high-performance',
+          ...(isOverWebGPUCanvas
+            ? { backgroundAlpha: 0, clearBeforeRender: false }
+            : {}),
         }) as PIXI.Renderer;
       }
 
@@ -389,7 +398,13 @@ namespace gdjs {
         this._gameCanvas.style.width = canvasWidth + 'px';
         this._gameCanvas.style.height = canvasHeight + 'px';
       }
-
+      if (this._threeCanvas && this._gameCanvas) {
+        const s = this._gameCanvas.style;
+        this._threeCanvas.style.top = s.top;
+        this._threeCanvas.style.left = s.left;
+        this._threeCanvas.style.width = s.width;
+        this._threeCanvas.style.height = s.height;
+      }
       // ...and to the div on top of it showing DOM elements (like inputs).
       this._domElementsContainer.style.top =
         this._marginTop + (maxHeight - canvasHeight) / 2 + 'px';
@@ -1155,8 +1170,10 @@ namespace gdjs {
     dispose(removeCanvas?: boolean) {
       this._pixiRenderer?.destroy();
       this._threeAdapter?.dispose();
-      this._pixiRenderer = null;
+            this._pixiRenderer = null;
       this._threeAdapter = null;
+      this._threeCanvas?.parentNode?.removeChild(this._threeCanvas);
+      this._threeCanvas = null;
 
       if (removeCanvas && this._gameCanvas) {
         this._gameCanvas.parentNode?.removeChild(this._gameCanvas);
