@@ -23,3 +23,15 @@
 
 export * from "three/webgpu";
 export * from './tsl-display';
+
+// `three/webgpu` does not re-export the WebGL-only shader helpers that the
+// GDevelop Three.js addons (`THREE_ADDONS`) still import, and use at
+// construction time - for example `ShaderPass` clones its uniforms with
+// `UniformsUtils.clone`. Without them, building any addon (a post-processing
+// pass, N8AO, ...) throws on the WebGPU backend.
+//
+// They come from the WebGL build (`three.module.js`) but the class/object
+// definitions themselves live in `three.core.js`, which `three/webgpu` already
+// imports too: Rollup deduplicates that shared module, so there is no second
+// Three.js core and `instanceof` checks stay valid.
+export { UniformsUtils, UniformsLib } from 'three';
