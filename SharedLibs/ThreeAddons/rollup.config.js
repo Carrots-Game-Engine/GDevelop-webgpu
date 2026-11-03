@@ -10,6 +10,10 @@ export default [
     // after r160). The bundle is written directly to the game engine
     // ("Runtime") files, where it's expected to be a plain script setting
     // a global - like pixi.js and ThreeAddons.js.
+    //
+    // Guard: if three-webgpu.js already populated window.THREE (because the
+    // index.html backend-selection snippet ran first), skip this entire file
+    // to avoid overwriting the single-instance guarantee.
     input: './src/three.ts',
     output: [
       {
@@ -17,12 +21,17 @@ export default [
         format: 'umd',
         file: './dist/three.js',
         sourcemap: true,
+        // Skip execution when window.THREE is already set (three-webgpu.js loaded first).
+        intro: 'if (typeof globalThis !== "undefined" && globalThis.THREE && globalThis.THREE.WebGPURenderer) { /* three-webgpu.js already loaded — skip */ } else {',
+        outro: '}',
       },
       {
         name: 'THREE',
         format: 'umd',
         file: '../../GDJS/Runtime/pixi-renderers/three.js',
         sourcemap: false,
+        intro: 'if (typeof globalThis !== "undefined" && globalThis.THREE && globalThis.THREE.WebGPURenderer) { /* three-webgpu.js already loaded — skip */ } else {',
+        outro: '}',
       },
     ],
     plugins: [

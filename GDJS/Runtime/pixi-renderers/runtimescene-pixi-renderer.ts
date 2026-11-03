@@ -11,7 +11,6 @@ namespace gdjs {
     private _pixiContainer: PIXI.Container;
     private _profilerText: PIXI.Text | null = null;
     private _showCursorAtNextRender: boolean = false;
-    private _threeRenderer: THREE.WebGLRenderer | null = null;
     private _layerRenderingMetrics: {
       rendered2DLayersCount: number;
       rendered3DLayersCount: number;
@@ -31,10 +30,6 @@ namespace gdjs {
 
       // Contains the layers of the scene (and, optionally, debug PIXI objects).
       this._pixiContainer.sortableChildren = true;
-
-      this._threeRenderer = this._runtimeGameRenderer
-        ? this._runtimeGameRenderer.getThreeRenderer()
-        : null;
     }
 
     onGameResolutionResized() {
@@ -73,7 +68,13 @@ namespace gdjs {
       const pixiRenderer = runtimeGameRenderer.getPIXIRenderer();
       if (!pixiRenderer) return;
 
-      const threeRenderer = this._threeRenderer;
+      const threeRenderer = runtimeGameRenderer.getThreeRenderer();
+      // WebGPU path: getThreeRenderer() returns null for WebGPUBackend.
+      // Use getWebGPURenderer() for the actual renderer object.
+      const threeAdapter = runtimeGameRenderer.getThreeAdapter();
+      const webGPURenderer = threeAdapter
+        ? threeAdapter.getWebGPURenderer()
+        : null;
       const isBackgroundColorForced =
         !!options && options.backgroundColor !== undefined;
       const backgroundColor =
@@ -95,6 +96,11 @@ namespace gdjs {
       // the headset require a new image, we'll just disable rendering when stepping to
       // not interfere with the headset's rendering.
       if (threeRenderer && threeRenderer.xr.isPresenting) return;
+
+      // For WebGPU: skip the frame while the async GPU init is still in
+      // progress (initAsync not yet resolved). The loading screen covers
+      // this brief window; once isGpuReady() is true we render normally.
+      if (threeAdapter && !threeAdapter.isGpuReady()) return;
 
       this._layerRenderingMetrics.rendered2DLayersCount = 0;
       this._layerRenderingMetrics.rendered3DLayersCount = 0;
@@ -291,6 +297,49 @@ namespace gdjs {
 
         // Uncomment to display some debug metrics from Three.js.
         // console.log(threeRenderer.info);
+      } else if (webGPURenderer) {
+        // ── WebGPU 3D rendering path ──────────────────────────────────────
+        // WebGPURenderer replaces WebGLRenderer entirely.
+        // No shared context with PixiJS, no resetState(), no EffectComposer
+        // (WebGL-only). 2D+3D layers render 3D only for now; full 2D
+        // compositing via WebGPU will be addressed separately.
+
+        let isFirstRender = true;
+
+        for (let i = 0; i < this._runtimeScene._orderedLayers.length; ++i) {
+          const runtimeLayer = this._runtimeScene._orderedLayers[i];
+          if (!runtimeLayer.isVisible()) continue;
+          if (!this._shouldRenderLayerIn3D(runtimeLayer)) continue;
+
+          const runtimeLayerRenderer = runtimeLayer.getRenderer();
+          const threeScene = runtimeLayerRenderer.getThreeScene();
+          const threeCamera = runtimeLayerRenderer.getThreeCamera();
+          if (!threeScene || !threeCamera) continue;
+
+          if (isFirstRender) {
+            (webGPURenderer as any).setClearColor(backgroundColor);
+            if (shouldClearCanvas) (webGPURenderer as any).clear();
+            if (!this._backgroundColor) {
+              this._backgroundColor = new THREE.Color();
+            }
+            this._backgroundColor.set(backgroundColor);
+            if (!threeScene.background) {
+              threeScene.background = this._backgroundColor;
+            }
+            isFirstRender = false;
+          } else {
+            if (threeScene.background === this._backgroundColor) {
+              threeScene.background = null;
+            }
+          }
+
+          (webGPURenderer as any).clearDepth();
+          // Route through the adapter so WebGPUBackend.render() handles
+          // the _gpuReady guard internally.
+          threeAdapter!.render(threeScene, threeCamera);
+
+          this._layerRenderingMetrics.rendered3DLayersCount++;
+        }
       } else {
         // 2D only rendering.
 
@@ -349,7 +398,9 @@ namespace gdjs {
      * the game logic reads the same matrices whether frames are drawn or not.
      */
     updateWithoutDrawing() {
-      const threeRenderer = this._threeRenderer;
+      const runtimeGameRenderer = this._runtimeGameRenderer;
+      if (!runtimeGameRenderer) return;
+      const threeRenderer = runtimeGameRenderer.getThreeRenderer();
       if (!threeRenderer || threeRenderer.xr.isPresenting) return;
 
       for (const runtimeLayer of this._runtimeScene._orderedLayers) {
@@ -398,7 +449,7 @@ namespace gdjs {
       const runtimeGameRenderer = this._runtimeGameRenderer;
       if (!runtimeGameRenderer) return;
 
-      const threeRenderer = this._threeRenderer;
+      const threeRenderer = runtimeGameRenderer.getThreeRenderer();
       // VR rendering relies on ThreeJS
       if (!threeRenderer)
         throw new Error('Cannot render a scene with no 3D elements in VR!');

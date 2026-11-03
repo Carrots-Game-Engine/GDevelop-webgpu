@@ -62,6 +62,44 @@
 
       // Expose for any script that loads after this snippet.
       window.__gdThreeBackend = backend;
+
+      // ── Three.js loader ──────────────────────────────────────────────────
+      // Inject the correct Three.js build synchronously via document.write so
+      // that window.THREE is populated before any GDJS_CODE_FILES script runs.
+      //
+      // • WebGL  → three.js        (classic UMD, same as before)
+      // • WebGPU → three-webgpu.js (UMD with WebGPURenderer)
+      //
+      // GDJS_CODE_FILES still contains a <script src="three.js"> tag injected
+      // by ExporterHelper.  To avoid loading it a second time when backend is
+      // webgpu, the UMD wrapper in three.js assigns to window.THREE only when
+      // that global is not already set; we rely on that guard here.
+      // (Both files set globalThis.THREE via the UMD factory.)
+      if (backend === 'webgpu') {
+        // Derive the base URL from the three.js script tag that ExporterHelper
+        // will inject — or fall back to a relative path for exported builds.
+        var threeBase = '';
+        try {
+          // In a preview, GDJS is served from an absolute URL (localhost:5002).
+          // Find the base by locating any existing pixi-renderers script, or
+          // use a path relative to the current document.
+          var scripts = document.getElementsByTagName('script');
+          for (var si = 0; si < scripts.length; si++) {
+            var src = scripts[si].src || '';
+            if (src.indexOf('pixi-renderers/') !== -1) {
+              threeBase = src.substring(0, src.indexOf('pixi-renderers/'));
+              break;
+            }
+          }
+        } catch(e) {}
+        // document.write is synchronous: the browser will block further
+        // parsing until three-webgpu.js is fetched and executed, which is
+        // exactly what we need so that window.THREE is ready for all
+        // subsequent scripts in GDJS_CODE_FILES.
+        document.write(
+          '<script src="' + threeBase + 'pixi-renderers/three-webgpu.js"><\\/script>'
+        );
+      }
     })();
     </script>
     <!-- Libs and GDJS core files : -->

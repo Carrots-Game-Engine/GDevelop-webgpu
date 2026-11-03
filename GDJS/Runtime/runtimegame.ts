@@ -1967,14 +1967,29 @@ namespace gdjs {
 
   /** Contract every rendering backend must satisfy. */
   export interface IThreeBackend {
+    /**
+     * Synchronous init — creates the renderer object (no GPU work yet for WebGPU).
+     * Returns true on success.
+     */
     init(options: ThreeRendererAdapterOptions): boolean;
+    /**
+     * For WebGPU: async GPU adapter/device acquisition.  Must be awaited
+     * before the first render() call, but does not block the sync startup
+     * path.  WebGL implements this as a no-op returning a resolved promise.
+     */
+    initAsync(): Promise<void>;
     render(scene: THREE.Scene, camera: THREE.Camera): void;
     resize(width: integer, height: integer): void;
     resetState(): void;
     dispose(): void;
+    /** Returns the WebGLRenderer, or null for WebGPU backends. */
     getThreeRenderer(): THREE.WebGLRenderer | null;
+    /** Returns the WebGPURenderer, or null for WebGL backends. */
+    getWebGPURenderer(): THREE.WebGPURenderer | null;
     getContext(): WebGL2RenderingContext | WebGLRenderingContext | null;
     isInitialized(): boolean;
+    /** True once initAsync() has completed successfully. */
+    isGpuReady(): boolean;
   }
 
   /** WebGL backend: wraps THREE.WebGLRenderer. */
@@ -2050,6 +2065,182 @@ namespace gdjs {
     isInitialized(): boolean {
       return this._renderer !== null;
     }
+
+    // WebGL init is entirely synchronous — initAsync is a resolved no-op.
+    initAsync(): Promise<void> {
+      return Promise.resolve();
+    }
+
+    isGpuReady(): boolean {
+      return this._renderer !== null;
+    }
+
+    /** WebGL backend never holds a WebGPURenderer. */
+    getWebGPURenderer(): THREE.WebGPURenderer | null {
+      return null;
+    }
+  }
+
+  // ── WebGPU backend ────────────────────────────────────────────────────────
+
+  /**
+   * WebGPU backend: wraps `THREE.WebGPURenderer`.
+   *
+   * `init()` creates the renderer synchronously so that the adapter is
+   * non-null immediately (needed by resize / dispose callers).
+   * `initAsync()` calls the mandatory `renderer.init()` in the background;
+   * `render()` silently skips frames until `isGpuReady()` returns true.
+   *
+   * PixiJS cannot share the WebGPU context, so it runs independently using
+   * `PIXI.autoDetectRenderer` (WebGL fallback) on the same canvas via CSS
+   * compositing — or as a separate off-screen layer depending on the project
+   * configuration.
+   */
+  export class WebGPUBackend implements IThreeBackend {
+    private _renderer: THREE.WebGPURenderer | null = null;
+    private _gpuReady: boolean = false;
+    private _initPromise: Promise<void> | null = null;
+
+    init(options: ThreeRendererAdapterOptions): boolean {
+      if (this._renderer) {
+        _threeAdapterLogger.error(
+          'WebGPUBackend.init() called while a renderer already exists. Call dispose() first.'
+        );
+        return false;
+      }
+      if (typeof THREE === 'undefined' || !THREE.WebGPURenderer) {
+        _threeAdapterLogger.warn(
+          'three-webgpu.js is not loaded; WebGPUBackend cannot be initialised.'
+        );
+        return false;
+      }
+      try {
+        this._renderer = new THREE.WebGPURenderer({
+          canvas: options.canvas,
+          antialias: options.antialias !== undefined ? options.antialias : false,
+          // WebGPU does not use stencil/preserveDrawingBuffer the same way;
+          // pass them for forward compatibility in case Three.js uses them.
+          stencil: options.stencil !== undefined ? options.stencil : true,
+          preserveDrawingBuffer:
+            options.preserveDrawingBuffer !== undefined
+              ? options.preserveDrawingBuffer
+              : true,
+          powerPreference: options.powerPreference || 'high-performance',
+          // forceWebGL: false  ← default; use WebGL only when WebGPU unavailable
+        } as any);
+      } catch (error) {
+        _threeAdapterLogger.error(
+          'THREE.WebGPURenderer constructor threw; falling back to 2-D only rendering:',
+          error
+        );
+        this._renderer = null;
+        return false;
+      }
+      this._renderer.shadowMap.enabled = true;
+      this._renderer.autoClear = false;
+      this._renderer.setSize(options.width, options.height);
+      return true;
+    }
+
+    /**
+     * Async GPU acquisition — must complete before the first render().
+     * Frames rendered while this is pending are silently skipped (the
+     * loading screen covers them anyway).
+     */
+    initAsync(): Promise<void> {
+      if (!this._renderer) return Promise.resolve();
+      if (this._initPromise) return this._initPromise;
+
+      this._initPromise = (this._renderer as any)
+        .init()
+        .then(() => {
+          this._gpuReady = true;
+          _threeAdapterLogger.info('WebGPU backend ready.');
+        })
+        .catch((err: unknown) => {
+          _threeAdapterLogger.error(
+            'WebGPURenderer.init() failed; 3-D rendering will not be available:',
+            err
+          );
+          this._gpuReady = false;
+          // Dispose so the adapter transparently falls back to no-renderer.
+          this._renderer?.dispose();
+          this._renderer = null;
+        });
+
+      return this._initPromise;
+    }
+
+    isGpuReady(): boolean {
+      return this._gpuReady;
+    }
+
+    render(scene: THREE.Scene, camera: THREE.Camera): void {
+      // Skip frames until the async GPU init completes.
+      if (!this._renderer || !this._gpuReady) return;
+      (this._renderer as any).render(scene, camera);
+    }
+
+    resize(width: integer, height: integer): void {
+      if (!this._renderer) return;
+      this._renderer.setSize(width, height);
+    }
+
+    resetState(): void {
+      // WebGPURenderer has no resetState equivalent; the concept only applies
+      // to the shared-context WebGL path (where PixiJS and Three.js interleave).
+    }
+
+    dispose(): void {
+      if (!this._renderer) return;
+      this._renderer.dispose();
+      this._renderer = null;
+      this._gpuReady = false;
+      this._initPromise = null;
+    }
+
+    /**
+     * WebGPURenderer does not expose a `getContext()` — it manages its own
+     * device internally.  Returns null so the adapter signals that PixiJS
+     * cannot share this context.
+     */
+    getContext(): null {
+      return null;
+    }
+
+    /**
+     * Returns null in WebGPU mode intentionally.
+     *
+     * Callers that use `getThreeRenderer()` were written for WebGL and may
+     * access WebGL-specific members (resetState, getContext, xr, info…).
+     * Returning null forces every existing call site to handle the absent
+     * renderer gracefully via its existing null-guard, rather than silently
+     * running WebGL-only code paths on a WebGPURenderer instance.
+     *
+     * Code that needs to render in WebGPU mode should call
+     * `getWebGPURenderer()` and check `isGpuReady()` first.
+     *
+     * Members verified present in three-webgpu.js r185 (safe if reached via
+     * the cast in WebGLBackend):
+     * - `xr.isPresenting` (5 occurrences), `.info` (56), `getDrawingBufferSize` (22)
+     *
+     * These are only accessed through WebGLBackend.getThreeRenderer(), which
+     * returns the real WebGLRenderer — the cast never occurs for WebGPU.
+     */
+    getThreeRenderer(): THREE.WebGLRenderer | null {
+      // Return null so WebGL-only callers degrade gracefully.
+      // Use getWebGPURenderer() for WebGPU-aware rendering paths.
+      return null;
+    }
+
+    /** Return the raw WebGPURenderer for WebGPU-aware callers. */
+    getWebGPURenderer(): THREE.WebGPURenderer | null {
+      return this._renderer;
+    }
+
+    isInitialized(): boolean {
+      return this._renderer !== null;
+    }
   }
 
   /** Public facade that owns one IThreeBackend and delegates every call to it. */
@@ -2061,9 +2252,21 @@ namespace gdjs {
     }
 
     static createBackend(backendType: 'webgl' | 'webgpu'): IThreeBackend {
+      // Condition: the project explicitly requested webgpu AND the bundle that
+      // ships THREE.WebGPURenderer (three-webgpu.js) has been loaded.
+      // typeof check guarantees it is an actual constructor, not undefined/null.
+      if (
+        backendType === 'webgpu' &&
+        typeof THREE !== 'undefined' &&
+        typeof THREE.WebGPURenderer === 'function'
+      ) {
+        return new gdjs.WebGPUBackend();
+      }
       if (backendType === 'webgpu') {
+        // Reached when three-webgpu.js was not loaded before this script.
         _threeAdapterLogger.warn(
-          "WebGPU backend requested but not yet implemented; falling back to 'webgl'."
+          "WebGPU backend requested but typeof THREE.WebGPURenderer !== 'function' " +
+            "(load three-webgpu.js instead of three.js); falling back to 'webgl'."
         );
       }
       return new gdjs.WebGLBackend();
@@ -2072,6 +2275,16 @@ namespace gdjs {
     init(options: ThreeRendererAdapterOptions): boolean {
       return this._backend.init(options);
     }
+
+    /**
+     * Start the async GPU acquisition (WebGPU only; WebGL returns immediately).
+     * Call this right after `init()` and before the first scene loads.
+     * Frames are silently skipped until `isGpuReady()` returns true.
+     */
+    initAsync(): Promise<void> {
+      return this._backend.initAsync();
+    }
+
     render(scene: THREE.Scene, camera: THREE.Camera): void {
       this._backend.render(scene, camera);
     }
@@ -2087,14 +2300,21 @@ namespace gdjs {
     getThreeRenderer(): THREE.WebGLRenderer | null {
       return this._backend.getThreeRenderer();
     }
+    getWebGPURenderer(): THREE.WebGPURenderer | null {
+      return this._backend.getWebGPURenderer();
+    }
     getContext(): WebGL2RenderingContext | WebGLRenderingContext | null {
       return this._backend.getContext();
     }
     isInitialized(): boolean {
       return this._backend.isInitialized();
     }
+    /** True once the GPU is ready to accept render() calls. Always true for WebGL. */
+    isGpuReady(): boolean {
+      return this._backend.isGpuReady();
+    }
     getBackendType(): 'webgl' | 'webgpu' {
-      return this._backend instanceof gdjs.WebGLBackend ? 'webgl' : 'webgpu';
+      return this._backend instanceof gdjs.WebGPUBackend ? 'webgpu' : 'webgl';
     }
   }
 

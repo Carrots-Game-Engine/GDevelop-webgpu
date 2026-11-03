@@ -127,6 +127,32 @@ namespace gdjs {
         });
         if (ok) {
           this._threeAdapter = adapter;
+          // For WebGPU: start async GPU acquisition in the background.
+          // WebGL resolves this immediately.  Frames will be silently skipped
+          // until isGpuReady() returns true (the loading screen covers this gap).
+          adapter.initAsync().catch((err) => {
+            logger.error('ThreeRendererAdapter.initAsync() failed:', err);
+            // If WebGPU acquisition failed and we are not already in WebGL
+            // fallback mode, reload the page forcing WebGL so the game works.
+            // We read window.__gdThreeBackend (set by the inline snippet in
+            // index.html) rather than re-parsing the URL, so the value is
+            // always consistent with what the snippet decided.
+            try {
+              // Guard against reload loops: only reload if the current session
+              // is genuinely in webgpu mode (not already a webgl fallback run).
+              const currentBackend =
+                (window as any).__gdThreeBackend || 'webgl';
+              if (currentBackend === 'webgpu') {
+                const params = new URLSearchParams(window.location.search);
+                params.set('threeBackend', 'webgl');
+                window.location.replace(
+                  window.location.pathname + '?' + params.toString()
+                );
+              }
+            } catch (navErr) {
+              logger.warn('Could not redirect to WebGL fallback:', navErr);
+            }
+          });
         } else {
           // The context creation can still fail, for example with software
           // rendering running out of resources: fall back to 2D rendering.
