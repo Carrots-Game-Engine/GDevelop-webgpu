@@ -31,7 +31,9 @@ const textureSlots = [
  */
 const createMaterial = async (
   project: gdProject,
-  settings: PBRMaterialSettings
+  settings: PBRMaterialSettings,
+  // $FlowFixMe[value-as-type]
+  environmentTexture: THREE.Texture | null
 ): Promise<THREE.Material> => {
   const needsPhysical =
     settings.transmission !== undefined ||
@@ -77,6 +79,11 @@ const createMaterial = async (
   }
   if (settings.aoIntensity !== undefined) {
     material.aoMapIntensity = settings.aoIntensity;
+  }
+  // Assign the environment map to the material itself (and not only to the
+  // scene) so that `envMapIntensity` is actually used by Three.js.
+  if (environmentTexture) {
+    material.envMap = environmentTexture;
   }
   if (settings.envMapIntensity !== undefined) {
     material.envMapIntensity = settings.envMapIntensity;
@@ -178,6 +185,7 @@ const PBRMaterialPreview = ({ project, settings, height = 220 }: Props) => {
   const canvasRef = React.useRef<?HTMLCanvasElement>(null);
   const meshesRef = React.useRef<Array<THREE.Mesh>>([]);
   const materialRef = React.useRef<?THREE.Material>(null);
+  const environmentRef = React.useRef<?THREE.Texture>(null);
 
   React.useEffect(() => {
     const canvas = canvasRef.current;
@@ -192,10 +200,10 @@ const PBRMaterialPreview = ({ project, settings, height = 220 }: Props) => {
 
     const scene = new THREE.Scene();
     const pmremGenerator = new THREE.PMREMGenerator(renderer);
-    scene.environment = pmremGenerator.fromScene(
-      new RoomEnvironment(),
-      0.04
-    ).texture;
+    const roomEnvironment = new RoomEnvironment();
+    scene.environment = pmremGenerator.fromScene(roomEnvironment, 0.04).texture;
+    roomEnvironment.dispose();
+    environmentRef.current = scene.environment; // The PMREM texture is owned by the generator's target.
 
     const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
     camera.position.set(0, 0.6, 4.2);
@@ -250,6 +258,7 @@ const PBRMaterialPreview = ({ project, settings, height = 220 }: Props) => {
         geometry.dispose();
       }
       placeholderMaterial.dispose();
+      environmentRef.current = null;
       pmremGenerator.dispose();
       renderer.dispose();
     };
@@ -258,18 +267,20 @@ const PBRMaterialPreview = ({ project, settings, height = 220 }: Props) => {
   React.useEffect(
     () => {
       let cancelled = false;
-      createMaterial(project, settings).then(material => {
-        if (cancelled) {
-          material.dispose();
-          return;
+      createMaterial(project, settings, environmentRef.current).then(
+        material => {
+          if (cancelled) {
+            material.dispose();
+            return;
+          }
+          const previousMaterial = materialRef.current;
+          materialRef.current = material;
+          for (const mesh of meshesRef.current) {
+            if (mesh.material) mesh.material = material;
+          }
+          if (previousMaterial) previousMaterial.dispose();
         }
-        const previousMaterial = materialRef.current;
-        materialRef.current = material;
-        for (const mesh of meshesRef.current) {
-          if (mesh.material) mesh.material = material;
-        }
-        if (previousMaterial) previousMaterial.dispose();
-      });
+      );
       return () => {
         cancelled = true;
       };
