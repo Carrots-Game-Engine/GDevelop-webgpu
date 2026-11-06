@@ -5,6 +5,10 @@ import {
   GLTFLoaderPlugin,
 } from 'three/examples/jsm/loaders/GLTFLoader';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
+import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader';
+import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader';
+import { UltraHDRLoader } from 'three/examples/jsm/loaders/UltraHDRLoader';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils';
 import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils';
 
@@ -36,6 +40,10 @@ declare global {
       GLTFParser,
       GLTFLoaderPlugin,
       DRACOLoader,
+      HDRLoader,
+      EXRLoader,
+      UltraHDRLoader,
+      RoomEnvironment,
       SkeletonUtils,
       mergeVertices,
       TransformControls,

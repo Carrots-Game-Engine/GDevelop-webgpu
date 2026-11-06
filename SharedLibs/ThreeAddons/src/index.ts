@@ -9,6 +9,11 @@ export { DepthOfFieldPass } from "./DepthOfFieldPass";
 
 export { GLTFLoader } from "./examples/jsm/loaders/GLTFLoader";
 export { DRACOLoader } from "./examples/jsm/loaders/DRACOLoader";
+export { HDRLoader } from "./examples/jsm/loaders/HDRLoader";
+export { EXRLoader } from "./examples/jsm/loaders/EXRLoader";
+export { UltraHDRLoader } from "./examples/jsm/loaders/UltraHDRLoader";
+
+export { RoomEnvironment } from "./examples/jsm/environments/RoomEnvironment";
 
 export * as SkeletonUtils from "./examples/jsm/utils/SkeletonUtils";
 export { mergeVertices } from "./examples/jsm/utils/BufferGeometryUtils";
