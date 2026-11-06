@@ -6,6 +6,9 @@ import { Spine, TextureAtlas } from '@esotericsoftware/spine-pixi-v7';
 import * as THREE from 'three';
 import { GLTFLoader, GLTF } from 'three/examples/jsm/loaders/GLTFLoader';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
+import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader';
+import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader';
+import { UltraHDRLoader } from 'three/examples/jsm/loaders/UltraHDRLoader';
 import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils';
 import ResourcesLoader from '../ResourcesLoader';
 import { loadFontFace } from '../Utils/FontFaceLoader';
@@ -260,6 +263,93 @@ const determineCrossOrigin = (url: string) => {
   // to not having `crossorigin` at all would NOT work because the browser would taint the
   // loaded resource so that it can't be read/used in a canvas (it's only working for display `<img>` on screen).
   return 'anonymous';
+};
+
+const getResourceFileExtension = (fileName: string): string => {
+  const withoutQuery = fileName.split('?')[0].split('#')[0];
+  const lastDot = withoutQuery.lastIndexOf('.');
+  return lastDot === -1
+    ? ''
+    : withoutQuery.substring(lastDot + 1).toLowerCase();
+};
+
+/**
+ * Check if the given buffer contains an Ultra HDR gain map (inside a JPEG).
+ * This cheap scan avoids trying to parse every JPEG with the UltraHDRLoader.
+ */
+const isUltraHDRBuffer = (buffer: ArrayBuffer): boolean => {
+  const maxLength = Math.min(buffer.byteLength, 256 * 1024);
+  const bytes = new Uint8Array(buffer, 0, maxLength);
+  let hasMPF = false;
+  for (let index = 0; index < bytes.length - 3; index++) {
+    if (
+      bytes[index] === 0x4d &&
+      bytes[index + 1] === 0x50 &&
+      bytes[index + 2] === 0x46 &&
+      bytes[index + 3] === 0x00
+    ) {
+      hasMPF = true;
+      break;
+    }
+  }
+  if (!hasMPF) return false;
+  const header = new TextDecoder('latin1').decode(
+    bytes.subarray(0, Math.min(bytes.length, 64 * 1024))
+  );
+  return (
+    header.indexOf('hdrgm') !== -1 ||
+    header.indexOf('GContainer') !== -1 ||
+    header.indexOf('HDR') !== -1
+  );
+};
+
+// $FlowFixMe[value-as-type]
+const loadUltraHDRTextureFromUrl = (
+  url: string
+): Promise<THREE.Texture | null> => {
+  return fetch(url, {
+    credentials: checkIfCredentialsRequired(url) ? 'include' : 'omit',
+  })
+    .then(response => {
+      if (!response.ok) throw new Error('Network response was not ok');
+      return response.arrayBuffer();
+    })
+    .then(
+      buffer =>
+        new Promise((resolve, reject) => {
+          if (!isUltraHDRBuffer(buffer)) {
+            resolve(null);
+            return;
+          }
+          const loader = new UltraHDRLoader();
+          try {
+            loader.parse(buffer, (texData: any) => {
+              try {
+                const data = texData.data || texData.hdrBuffer;
+                const texture = new THREE.DataTexture(
+                  data,
+                  texData.width,
+                  texData.height,
+                  THREE.RGBAFormat,
+                  texData.type || THREE.HalfFloatType
+                );
+                texture.mapping = THREE.EquirectangularReflectionMapping;
+                texture.colorSpace = THREE.LinearSRGBColorSpace;
+                texture.flipY = true;
+                texture.minFilter = THREE.LinearFilter;
+                texture.magFilter = THREE.LinearFilter;
+                texture.generateMipmaps = false;
+                texture.needsUpdate = true;
+                resolve(texture);
+              } catch (error) {
+                reject(error);
+              }
+            });
+          } catch (error) {
+            reject(error);
+          }
+        })
+    );
 };
 
 const applyPixiTextureSettings = (resource: gdResource, texture: any) => {
@@ -1065,6 +1155,54 @@ export default class PixiResourcesLoader {
     return (loadedOrLoadingThreeTextures[resourceName] = Promise.resolve(
       threeTexture
     ));
+  }
+
+  /**
+   * Return an equirectangular environment texture (image based lighting) for
+   * the specified resource. Unlike `getThreeTexture`, it supports HDR, EXR and
+   * Ultra HDR files. Returns null when the resource is missing or empty.
+   * @param project The project
+   * @param resourceName The name of the resource
+   */
+  static async getThreeEquirectangularEnvironmentTexture(
+    project: gdProject,
+    resourceName: string
+    // $FlowFixMe[value-as-type]
+  ): Promise<THREE.Texture | null> {
+    if (!resourceName) return null;
+    const resourcesManager = project.getResourcesManager();
+    if (!resourcesManager.hasResource(resourceName)) return null;
+    const resource = resourcesManager.getResource(resourceName);
+    if (resource.getKind() !== 'image') return null;
+
+    const extension = getResourceFileExtension(resource.getFile());
+    const url = ResourcesLoader.getResourceFullUrl(project, resourceName);
+
+    if (extension === 'hdr' || extension === 'exr') {
+      const loader = extension === 'exr' ? new EXRLoader() : new HDRLoader();
+      loader.setCrossOrigin(determineCrossOrigin(url));
+      loader.setWithCredentials(checkIfCredentialsRequired(url));
+      // $FlowFixMe[value-as-type]
+      const texture: THREE.Texture = await loader.loadAsync(url);
+      texture.mapping = THREE.EquirectangularReflectionMapping;
+      return texture;
+    }
+
+    if (extension === 'jpg' || extension === 'jpeg') {
+      // A plain JPEG is usable as-is (through Pixi). Ultra HDR JPEG files are
+      // upgraded to their linear HDR version when they contain a gain map.
+      const ultraHDRTexture = await loadUltraHDRTextureFromUrl(url);
+      if (ultraHDRTexture) return ultraHDRTexture;
+    }
+
+    const texture = await PixiResourcesLoader.getThreeTexture(
+      project,
+      resourceName
+    );
+    const equirectangularTexture = texture.clone();
+    equirectangularTexture.mapping = THREE.EquirectangularReflectionMapping;
+    equirectangularTexture.needsUpdate = true;
+    return equirectangularTexture;
   }
 
   /**
