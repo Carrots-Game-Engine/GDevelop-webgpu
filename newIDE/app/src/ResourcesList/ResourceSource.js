@@ -46,7 +46,9 @@ export const allResourceKindsAndMetadata = [
   {
     kind: 'image',
     displayName: (t`Image`: any),
-    fileExtensions: ['png', 'jpg', 'jpeg', 'webp'],
+    // HDR and EXR are used as environment maps (image based lighting) for 3D
+    // scenes and PBR materials.
+    fileExtensions: ['png', 'jpg', 'jpeg', 'webp', 'hdr', 'exr'],
     createNewResource: (): gdImageResource => new gd.ImageResource(),
   },
   {

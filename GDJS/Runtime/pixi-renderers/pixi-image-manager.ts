@@ -13,6 +13,19 @@ namespace gdjs {
     );
   };
 
+  /**
+   * HDR and EXR files are not supported by Pixi. They are only used as
+   * environment maps (image based lighting) and loaded by the
+   * `gdjs.EnvironmentManager` with the Three.js loaders.
+   */
+  const isHDRorEXRFile = (fileName: string): boolean => {
+    const withoutQuery = fileName.split('?')[0].split('#')[0];
+    const lastDot = withoutQuery.lastIndexOf('.');
+    const extension =
+      lastDot === -1 ? '' : withoutQuery.substring(lastDot + 1).toLowerCase();
+    return extension === 'hdr' || extension === 'exr';
+  };
+
   const applyTextureSettings = (
     texture: PIXI.Texture | undefined,
     resourceData: ResourceData
@@ -453,6 +466,13 @@ namespace gdjs {
      */
     async _loadTexture(resource: ResourceData): Promise<void> {
       if (this._loadedTextures.get(resource)) {
+        return;
+      }
+      if (isHDRorEXRFile(resource.file)) {
+        // HDR and EXR files cannot be loaded by Pixi: skip them so that the
+        // resource preloading does not log an error. The EnvironmentManager
+        // loads them with the Three.js loaders when used as an environment
+        // map.
         return;
       }
       const resourceUrl = this._resourceLoader.getFullUrl(resource.file);
