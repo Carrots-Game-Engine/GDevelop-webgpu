@@ -2507,7 +2507,7 @@ module.exports = {
         )
         .addParameter(
           'imageResource',
-          _('Equirectangular image (360° panorama)'),
+          _('Equirectangular image (360° panorama, HDR/EXR supported)'),
           '',
           false
         )
@@ -2559,6 +2559,90 @@ module.exports = {
         .useStandardParameters('number', gd.ParameterOptions.makeNewOptions())
         .setFunctionName('gdjs.pbr.setEnvironmentIntensity')
         .setGetter('gdjs.pbr.getEnvironmentIntensity')
+        .setIncludeFile(pbrIncludeFile);
+
+      extension
+        .addExpressionAndConditionAndAction(
+          'number',
+          'EnvironmentRotation',
+          _('Environment map rotation'),
+          _('the rotation of the environment map'),
+          _('the rotation of the environment map (image based lighting)'),
+          _('PBR materials'),
+          'res/conditions/3d_box.svg'
+        )
+        .addCodeOnlyParameter('currentScene', '')
+        .useStandardParameters('number', gd.ParameterOptions.makeNewOptions())
+        .setFunctionName('gdjs.pbr.setEnvironmentRotation')
+        .setGetter('gdjs.pbr.getEnvironmentRotation')
+        .setIncludeFile(pbrIncludeFile);
+
+      extension
+        .addExpressionAndConditionAndAction(
+          'number',
+          'EnvironmentBackgroundIntensity',
+          _('Environment map background brightness'),
+          _('the brightness of the environment map background'),
+          _(
+            'the brightness of the environment map (image based lighting) shown as the background'
+          ),
+          _('PBR materials'),
+          'res/conditions/3d_box.svg'
+        )
+        .addCodeOnlyParameter('currentScene', '')
+        .useStandardParameters('number', gd.ParameterOptions.makeNewOptions())
+        .setFunctionName('gdjs.pbr.setEnvironmentBackgroundIntensity')
+        .setGetter('gdjs.pbr.getEnvironmentBackgroundIntensity')
+        .setIncludeFile(pbrIncludeFile);
+
+      extension
+        .addExpressionAndConditionAndAction(
+          'number',
+          'EnvironmentBackgroundBlurriness',
+          _('Environment map background blurriness'),
+          _('the blurriness of the environment map background'),
+          _(
+            'the blurriness of the environment map (image based lighting) shown as the background'
+          ),
+          _('PBR materials'),
+          'res/conditions/3d_box.svg'
+        )
+        .addCodeOnlyParameter('currentScene', '')
+        .useStandardParameters('number', gd.ParameterOptions.makeNewOptions())
+        .setFunctionName('gdjs.pbr.setEnvironmentBackgroundBlurriness')
+        .setGetter('gdjs.pbr.getEnvironmentBackgroundBlurriness')
+        .setIncludeFile(pbrIncludeFile);
+
+      extension
+        .addExpressionAndConditionAndAction(
+          'boolean',
+          'EnvironmentBackgroundShown',
+          _('Environment map shown as background'),
+          _('the environment map should be shown as the background'),
+          _('the environment map is shown as the background'),
+          _('PBR materials'),
+          'res/conditions/3d_box.svg'
+        )
+        .addCodeOnlyParameter('currentScene', '')
+        .useStandardParameters('boolean', gd.ParameterOptions.makeNewOptions())
+        .setFunctionName('gdjs.pbr.setEnvironmentShowBackground')
+        .setGetter('gdjs.pbr.isEnvironmentBackgroundShown')
+        .setIncludeFile(pbrIncludeFile);
+
+      extension
+        .addExpressionAndConditionAndAction(
+          'boolean',
+          'EnvironmentAffectsMaterials',
+          _('Environment map lights the objects'),
+          _('the environment map should light the objects'),
+          _('the environment map lights the objects'),
+          _('PBR materials'),
+          'res/conditions/3d_box.svg'
+        )
+        .addCodeOnlyParameter('currentScene', '')
+        .useStandardParameters('boolean', gd.ParameterOptions.makeNewOptions())
+        .setFunctionName('gdjs.pbr.setEnvironmentAffectsMaterials')
+        .setGetter('gdjs.pbr.environmentAffectsMaterials')
         .setIncludeFile(pbrIncludeFile);
     }
     {
@@ -2951,9 +3035,11 @@ module.exports = {
         .setType('choice')
         .addChoice('cube', _('Cube map (6 images)'))
         .addChoice('equirect', _('Equirectangular image (360° panorama)'))
+        .addChoice('default', _('Default environment'))
+        .addChoice('skybox', _('Skybox (the layer background)'))
         .setDescription(
           _(
-            'A cube map is made of 6 images (like a skybox). An equirectangular image is a single 360° panorama.'
+            'A cube map is made of 6 images (like a skybox). An equirectangular image is a single 360° panorama (an HDR, EXR or Ultra HDR file gives better reflections). The default environment is a neutral studio room. The skybox uses the background of the layer (the images of a Skybox effect for example).'
           )
         );
       properties
@@ -2998,9 +3084,7 @@ module.exports = {
         .addExtraInfo('image')
         .setLabel(_('Equirectangular image (360° panorama)'))
         .setGroup(_('Images'))
-        .setDescription(
-          _('Used when the source is an equirectangular image.')
-        );
+        .setDescription(_('Used when the source is an equirectangular image.'));
       properties
         .getOrCreate('environmentIntensity')
         .setValue('1')
@@ -3039,9 +3123,59 @@ module.exports = {
         .setLabel(_('Background brightness'))
         .setType('number')
         .setDescription(
-          _('Brightness of the images shown in the background (1 shows them as they are).')
+          _(
+            'Brightness of the images shown in the background (1 shows them as they are).'
+          )
         )
         .setGroup(_('Background'));
+      properties
+        .getOrCreate('backgroundBlurriness')
+        .setValue('0')
+        .setLabel(_('Background blurriness'))
+        .setType('number')
+        .setDescription(
+          _(
+            'How blurry the images are shown in the background (0 shows them sharp).'
+          )
+        )
+        .setGroup(_('Background'));
+      properties
+        .getOrCreate('linkBackgroundRotation')
+        .setValue('true')
+        .setLabel(_('Rotate the background with the environment'))
+        .setType('boolean')
+        .setDescription(
+          _(
+            'Rotate the background with the environment map. Disable it to keep the background still while the environment rotates.'
+          )
+        )
+        .setGroup(_('Background'));
+      properties
+        .getOrCreate('affectsMaterials')
+        .setValue('true')
+        .setLabel(_('Light the objects'))
+        .setType('boolean')
+        .setDescription(
+          _(
+            'Use the images to light and reflect on 3D objects. Disable it to only show the images as the background.'
+          )
+        )
+        .setGroup(_('Lighting'));
+      properties
+        .getOrCreate('quality')
+        .setValue('auto')
+        .setLabel(_('Quality'))
+        .setType('choice')
+        .addChoice('auto', _('Automatic'))
+        .addChoice('low', _('Low (128 px, fastest)'))
+        .addChoice('medium', _('Medium (256 px)'))
+        .addChoice('high', _('High (512 px, sharpest)'))
+        .setDescription(
+          _(
+            'Resolution of the prefiltered reflections. A lower quality is faster and uses less memory, a higher one gives sharper reflections.'
+          )
+        )
+        .setGroup(_('Quality'));
     }
     {
       const effect = extension
