@@ -599,12 +599,38 @@ namespace gdjs {
     private _materialsByResource = new Map<string, Set<THREE.Material>>();
 
     // Environment map (image based lighting) state.
-    private _environmentTexture: THREE.Texture | null = null;
+    private _environmentManager: gdjs.EnvironmentManager;
+    private _environmentEntry: gdjs.EnvironmentCacheEntry | null = null;
     private _environmentIntensity: float = 1;
-    private _pmremGenerator: THREE.PMREMGenerator | null = null;
+    private _environmentRotation: float = 0;
+    private _environmentBackgroundIntensity: float = 1;
+    private _environmentBackgroundBlurriness: float = 0;
+    private _environmentShowBackground: boolean = false;
+    private _environmentAffectsMaterials: boolean = true;
+    private _environmentRotationLinkedToBackground: boolean = true;
+    /** The runtime scene last used to apply the environment to loaded scenes. */
+    private _environmentRuntimeScene: gdjs.RuntimeScene | null = null;
+
+    /**
+     * The shader uniform holding the per-material environment intensity, for
+     * the compiled shader of each material.
+     */
+    private _envIntensityUniforms = new WeakMap<
+      THREE.Material,
+      { value: number }
+    >();
 
     constructor(runtimeGame: gdjs.RuntimeGame) {
       this._runtimeGame = runtimeGame;
+      this._environmentManager = new gdjs.EnvironmentManager(runtimeGame);
+    }
+
+    /**
+     * @returns the manager owning the PMREM generator and the environment
+     * textures shared by the scenes and the "Environment map" effects.
+     */
+    getEnvironmentManager(): gdjs.EnvironmentManager {
+      return this._environmentManager;
     }
 
     /**
@@ -657,6 +683,7 @@ namespace gdjs {
         transparent: options.transparent === true,
       });
       this._uniqueMaterials.add(material);
+      this._patchMaterialEnvironmentIntensity(material);
       this._applySettings(material, settings);
       return material;
     }
@@ -671,6 +698,9 @@ namespace gdjs {
     makeUniqueMaterialCopy(material: THREE.Material): THREE.Material {
       const materialCopy = material.clone();
       this._uniqueMaterials.add(materialCopy);
+      // `Material.clone` does not keep `onBeforeCompile`: the environment
+      // intensity multiplier must be applied again to the copy.
+      this._patchMaterialEnvironmentIntensity(materialCopy);
       // Keep tracking the resources used by the copy.
       for (const entry of this._materialsByResource) {
         if (entry[1].has(material)) {
@@ -714,6 +744,7 @@ namespace gdjs {
       });
       this._uniqueMaterials.add(newMaterial);
       copyCommonMaterialProperties(material, newMaterial);
+      this._patchMaterialEnvironmentIntensity(newMaterial);
       this._applySettings(newMaterial, settings);
       return newMaterial;
     }
@@ -769,7 +800,7 @@ namespace gdjs {
           standardMaterial.displacementBias = value;
           break;
         case 'envMapIntensity':
-          standardMaterial.envMapIntensity = value;
+          this._setMaterialEnvironmentIntensity(material, value);
           break;
         case 'alphaCutoff':
           material.alphaTest = value > 0 ? value : 0;
@@ -852,7 +883,7 @@ namespace gdjs {
         case 'displacementBias':
           return standardMaterial.displacementBias;
         case 'envMapIntensity':
-          return standardMaterial.envMapIntensity;
+          return this._getMaterialEnvironmentIntensity(material);
         case 'alphaCutoff':
           return material.alphaTest;
         case 'ior':
@@ -963,10 +994,23 @@ namespace gdjs {
     }
 
     /**
-     * @returns the image based lighting texture currently applied to scenes.
+     * @returns the image based lighting texture currently applied to scenes
+     * (or null when no environment map is set).
      */
     getEnvironmentTexture(): THREE.Texture | null {
-      return this._environmentTexture;
+      if (!this._environmentEntry) return null;
+      if (this._environmentEntry.target) {
+        return this._environmentEntry.target.texture;
+      }
+      return this._environmentEntry.sharedTexture;
+    }
+
+    /**
+     * @returns true when an environment map (image based lighting) is set,
+     * even if its HDR file is still loading.
+     */
+    hasEnvironmentMap(): boolean {
+      return this._environmentEntry !== null;
     }
 
     /**
@@ -985,6 +1029,116 @@ namespace gdjs {
     }
 
     /**
+     * @returns the rotation of the environment around the vertical axis, in
+     * degrees.
+     */
+    getEnvironmentRotation(): float {
+      return this._environmentRotation;
+    }
+
+    /**
+     * Set the rotation of the environment around the vertical axis, in
+     * degrees.
+     */
+    setEnvironmentRotation(runtimeScene: gdjs.RuntimeScene, value: float) {
+      this._environmentRotation = value;
+      this.applyEnvironmentToScenes(runtimeScene);
+    }
+
+    /**
+     * @returns the brightness of the environment when it is shown as the
+     * background.
+     */
+    getEnvironmentBackgroundIntensity(): float {
+      return this._environmentBackgroundIntensity;
+    }
+
+    /**
+     * Set the brightness of the environment when it is shown as the
+     * background.
+     */
+    setEnvironmentBackgroundIntensity(
+      runtimeScene: gdjs.RuntimeScene,
+      value: float
+    ) {
+      this._environmentBackgroundIntensity = value;
+      this.applyEnvironmentToScenes(runtimeScene);
+    }
+
+    /**
+     * @returns how blurry the environment is when it is shown as the
+     * background.
+     */
+    getEnvironmentBackgroundBlurriness(): float {
+      return this._environmentBackgroundBlurriness;
+    }
+
+    /**
+     * Set how blurry the environment is when it is shown as the background.
+     */
+    setEnvironmentBackgroundBlurriness(
+      runtimeScene: gdjs.RuntimeScene,
+      value: float
+    ) {
+      this._environmentBackgroundBlurriness = value;
+      this.applyEnvironmentToScenes(runtimeScene);
+    }
+
+    /**
+     * Show (or hide) the environment map as the background of the scenes.
+     */
+    setEnvironmentShowBackground(
+      runtimeScene: gdjs.RuntimeScene,
+      showBackground: boolean
+    ) {
+      this._environmentShowBackground = showBackground;
+      this.applyEnvironmentToScenes(runtimeScene);
+    }
+
+    /**
+     * @returns true when the environment map is shown as the background.
+     */
+    getEnvironmentShowBackground(): boolean {
+      return this._environmentShowBackground;
+    }
+
+    /**
+     * Set whether the environment map lights the PBR materials. When false,
+     * only the background (if shown) is affected.
+     */
+    setEnvironmentAffectsMaterials(
+      runtimeScene: gdjs.RuntimeScene,
+      affectsMaterials: boolean
+    ) {
+      this._environmentAffectsMaterials = affectsMaterials;
+      this.applyEnvironmentToScenes(runtimeScene);
+    }
+
+    /**
+     * @returns true when the environment map lights the PBR materials.
+     */
+    getEnvironmentAffectsMaterials(): boolean {
+      return this._environmentAffectsMaterials;
+    }
+
+    /**
+     * Set whether the background must rotate with the environment map.
+     */
+    setEnvironmentRotationLinkedToBackground(linked: boolean) {
+      this._environmentRotationLinkedToBackground = linked;
+      if (this._environmentRuntimeScene) {
+        this.applyEnvironmentToScenes(this._environmentRuntimeScene);
+      }
+    }
+
+    /**
+     * @returns true when the background rotates with the environment map.
+     */
+    getEnvironmentRotationLinkedToBackground(): boolean {
+      return this._environmentRotationLinkedToBackground;
+    }
+
+    /**
      * Prefilter an environment texture (a cube texture or an equirectangular
      * texture) with PMREM, so that it can be used as the `environment` of a
      * scene with a smooth roughness on every GPU.
@@ -996,29 +1150,24 @@ namespace gdjs {
     prefilterEnvironmentTexture(
       sourceTexture: THREE.Texture
     ): THREE.Texture | null {
-      const threeRenderer = this._runtimeGame.getRenderer().getThreeRenderer();
-      if (!threeRenderer) {
+      if (!this._runtimeGame.getRenderer().getThreeRenderer()) {
         logger.warn(
           'Cannot prefilter the environment texture: no 3D renderer is available.'
         );
         return null;
       }
-      if (!this._pmremGenerator) {
-        this._pmremGenerator = new THREE.PMREMGenerator(threeRenderer);
-      }
       // PMREM prefiltering is needed for smooth roughness on every GPU
       // (see https://threejs.org/docs/#api/en/materials/MeshStandardMaterial).
-      return (sourceTexture as THREE.CubeTexture).isCubeTexture
-        ? this._pmremGenerator.fromCubemap(sourceTexture as THREE.CubeTexture)
-            .texture
-        : this._pmremGenerator.fromEquirectangular(sourceTexture).texture;
+      return this._environmentManager.prefilterEnvironmentTexture(
+        sourceTexture
+      );
     }
 
     /**
      * Dispose a texture returned by `prefilterEnvironmentTexture`.
      */
     disposeEnvironmentTexture(texture: THREE.Texture): void {
-      texture.dispose();
+      this._environmentManager.disposePrefilteredTexture(texture);
     }
 
     /**
@@ -1031,44 +1180,50 @@ namespace gdjs {
       runtimeScene: gdjs.RuntimeScene,
       faceResourceNames: [string, string, string, string, string, string]
     ): void {
-      const imageManager = this._runtimeGame.getImageManager();
-      const cubeTexture = imageManager.getThreeCubeTexture(
-        faceResourceNames[0],
-        faceResourceNames[1],
-        faceResourceNames[2],
-        faceResourceNames[3],
-        faceResourceNames[4],
-        faceResourceNames[5]
-      );
-      this._setEnvironmentTexture(runtimeScene, cubeTexture);
+      this._setEnvironmentSource(runtimeScene, {
+        type: 'cube',
+        faceResourceNames: faceResourceNames.slice(),
+      });
     }
 
     /**
      * Use an equirectangular image as an environment map (image based
-     * lighting).
+     * lighting). The image can be an HDR, EXR or Ultra HDR file.
      */
     setEnvironmentMapFromEquirectangularImage(
       runtimeScene: gdjs.RuntimeScene,
       resourceName: string
     ): void {
-      const imageManager = this._runtimeGame.getImageManager();
-      const texture = imageManager.getThreeTexture(resourceName, {
-        isColorData: true,
+      if (!resourceName) {
+        this.removeEnvironmentMap(runtimeScene);
+        return;
+      }
+      this._setEnvironmentSource(runtimeScene, {
+        type: 'equirect',
+        resourceName,
       });
-      texture.mapping = THREE.EquirectangularReflectionMapping;
-      this._setEnvironmentTexture(runtimeScene, texture);
     }
 
     /**
      * Remove the environment map (image based lighting) from scenes.
      */
     removeEnvironmentMap(runtimeScene: gdjs.RuntimeScene): void {
-      if (this._environmentTexture) {
-        this._environmentTexture.dispose();
-        this._environmentTexture = null;
+      const previousTexture = this.getEnvironmentTexture();
+      const previousEntry = this._environmentEntry;
+      this._environmentEntry = null;
+      if (previousEntry) {
+        this._environmentManager.release(previousEntry);
       }
       this._forEachThreeScene(runtimeScene, (threeScene) => {
         threeScene.environment = null;
+        threeScene.environmentIntensity = 1;
+        threeScene.environmentRotation.set(0, 0, 0);
+        if (previousTexture && threeScene.background === previousTexture) {
+          threeScene.background = null;
+          threeScene.backgroundIntensity = 1;
+          threeScene.backgroundBlurriness = 0;
+          threeScene.backgroundRotation.set(0, 0, 0);
+        }
       });
     }
 
@@ -1077,9 +1232,38 @@ namespace gdjs {
      * scenes of the given runtime scene (and the other loaded scenes).
      */
     applyEnvironmentToScenes(runtimeScene: gdjs.RuntimeScene): void {
+      this._environmentRuntimeScene = runtimeScene;
+      const entry = this._environmentEntry;
+      const texture = entry
+        ? this._environmentManager.getEntryTexture(entry)
+        : null;
+      const rotation = gdjs.toRad(this._environmentRotation);
       this._forEachThreeScene(runtimeScene, (threeScene) => {
-        threeScene.environment = this._environmentTexture;
-        threeScene.environmentIntensity = this._environmentIntensity;
+        if (texture && this._environmentAffectsMaterials) {
+          threeScene.environment = texture;
+          threeScene.environmentIntensity = this._environmentIntensity;
+          threeScene.environmentRotation.set(0, rotation, 0);
+        } else {
+          threeScene.environment = null;
+          threeScene.environmentIntensity = 1;
+          threeScene.environmentRotation.set(0, 0, 0);
+        }
+        if (texture && this._environmentShowBackground) {
+          threeScene.background = texture;
+          threeScene.backgroundIntensity = this._environmentBackgroundIntensity;
+          threeScene.backgroundBlurriness =
+            this._environmentBackgroundBlurriness;
+          threeScene.backgroundRotation.set(
+            0,
+            this._environmentRotationLinkedToBackground ? rotation : 0,
+            0
+          );
+        } else if (texture && threeScene.background === texture) {
+          threeScene.background = null;
+          threeScene.backgroundIntensity = 1;
+          threeScene.backgroundBlurriness = 0;
+          threeScene.backgroundRotation.set(0, 0, 0);
+        }
       });
     }
 
@@ -1097,30 +1281,27 @@ namespace gdjs {
       }
       this._uniqueMaterials.clear();
       this._materialsByResource.clear();
-      if (this._environmentTexture) {
-        this._environmentTexture.dispose();
-        this._environmentTexture = null;
+      if (this._environmentEntry) {
+        this._environmentManager.release(this._environmentEntry);
+        this._environmentEntry = null;
       }
-      if (this._pmremGenerator) {
-        this._pmremGenerator.dispose();
-        this._pmremGenerator = null;
-      }
+      this._environmentManager.dispose();
     }
 
-    private _setEnvironmentTexture(
+    private _setEnvironmentSource(
       runtimeScene: gdjs.RuntimeScene,
-      sourceTexture: THREE.Texture
+      source: gdjs.EnvironmentSource
     ): void {
-      const environmentTexture = this.prefilterEnvironmentTexture(
-        sourceTexture
-      );
-      if (!environmentTexture) {
-        return;
-      }
-      const previousTexture = this._environmentTexture;
-      this._environmentTexture = environmentTexture;
-      if (previousTexture) {
-        previousTexture.dispose();
+      const entry = this._environmentManager.acquire(source, 'auto');
+      const previousEntry = this._environmentEntry;
+      this._environmentEntry = entry;
+      this._environmentManager.addReadyListener(entry, () => {
+        if (this._environmentEntry !== entry) return;
+        const currentScene = this._environmentRuntimeScene || runtimeScene;
+        this.applyEnvironmentToScenes(currentScene);
+      });
+      if (previousEntry) {
+        this._environmentManager.release(previousEntry);
       }
       this.applyEnvironmentToScenes(runtimeScene);
     }
@@ -1188,7 +1369,10 @@ namespace gdjs {
         standardMaterial.displacementBias = settings.displacementBias;
       }
       if (settings.envMapIntensity !== undefined) {
-        standardMaterial.envMapIntensity = settings.envMapIntensity;
+        this._setMaterialEnvironmentIntensity(
+          material,
+          settings.envMapIntensity
+        );
       }
       if (settings.doubleSided !== undefined) {
         material.side = settings.doubleSided
@@ -1322,6 +1506,69 @@ namespace gdjs {
         entry[1].delete(material);
       }
     }
+
+    /**
+     * Patch the shader of a standard/physical material so that its
+     * `envMapIntensity` works even when the environment comes from
+     * `scene.environment`.
+     *
+     * Three.js overwrites the `envMapIntensity` uniform with
+     * `scene.environmentIntensity` for materials without their own `envMap`
+     * (see `WebGLRenderer`). A separate multiplier uniform is added to the
+     * image based lighting functions to keep a per-material strength.
+     */
+    private _patchMaterialEnvironmentIntensity(material: THREE.Material): void {
+      const standardMaterial = material as THREE.MeshStandardMaterial;
+      if (!standardMaterial.isMeshStandardMaterial) {
+        return;
+      }
+      material.onBeforeCompile = (shader) => {
+        const scale =
+          typeof material.userData.gdjsEnvMapIntensityScale === 'number'
+            ? material.userData.gdjsEnvMapIntensityScale
+            : 1;
+        const uniform = { value: scale };
+        shader.uniforms.gdjsEnvMapIntensityScale = uniform;
+        this._envIntensityUniforms.set(material, uniform);
+        shader.fragmentShader =
+          'uniform float gdjsEnvMapIntensityScale;\n' +
+          shader.fragmentShader
+            .replace(
+              'return PI * envMapColor.rgb * envMapIntensity;',
+              'return PI * envMapColor.rgb * envMapIntensity * gdjsEnvMapIntensityScale;'
+            )
+            .replace(
+              'return envMapColor.rgb * envMapIntensity;',
+              'return envMapColor.rgb * envMapIntensity * gdjsEnvMapIntensityScale;'
+            );
+      };
+      // Every PBR material uses the same shader patch: they can share the
+      // compiled Three.js programs.
+      material.customProgramCacheKey = () => 'gdjs-pbr-env-map-intensity';
+      material.needsUpdate = true;
+    }
+
+    private _setMaterialEnvironmentIntensity(
+      material: THREE.Material,
+      value: float
+    ): void {
+      material.userData.gdjsEnvMapIntensityScale = value;
+      // The multiplier is applied by the shader patch, both for materials
+      // using `scene.environment` and for materials with their own `envMap`:
+      // `envMapIntensity` is kept neutral to avoid applying the value twice.
+      (material as THREE.MeshStandardMaterial).envMapIntensity = 1;
+      const uniform = this._envIntensityUniforms.get(material);
+      if (uniform) {
+        uniform.value = value;
+      }
+    }
+
+    private _getMaterialEnvironmentIntensity(material: THREE.Material): float {
+      const scale = material.userData.gdjsEnvMapIntensityScale;
+      return typeof scale === 'number'
+        ? scale
+        : (material as THREE.MeshStandardMaterial).envMapIntensity;
+    }
   }
 
   const createThreeMaterial = (options: {
@@ -1374,6 +1621,10 @@ namespace gdjs {
     }
     if (fromStandard.map && toStandard.map !== undefined) {
       toStandard.map = fromStandard.map;
+    }
+    if (typeof from.userData.gdjsEnvMapIntensityScale === 'number') {
+      to.userData.gdjsEnvMapIntensityScale =
+        from.userData.gdjsEnvMapIntensityScale;
     }
   };
 
@@ -1478,11 +1729,116 @@ namespace gdjs {
     ): float => getPBRMaterialManager(runtimeScene).getEnvironmentIntensity();
 
     /**
+     * Set the rotation of the environment map around the vertical axis, in
+     * degrees.
+     */
+    export const setEnvironmentRotation = (
+      runtimeScene: gdjs.RuntimeScene,
+      value: float
+    ) => {
+      getPBRMaterialManager(runtimeScene).setEnvironmentRotation(
+        runtimeScene,
+        value
+      );
+    };
+
+    /**
+     * Get the rotation of the environment map, in degrees.
+     */
+    export const getEnvironmentRotation = (
+      runtimeScene: gdjs.RuntimeScene
+    ): float => getPBRMaterialManager(runtimeScene).getEnvironmentRotation();
+
+    /**
+     * Show or hide the environment map as the background of scenes.
+     */
+    export const setEnvironmentShowBackground = (
+      runtimeScene: gdjs.RuntimeScene,
+      showBackground: boolean
+    ) => {
+      getPBRMaterialManager(runtimeScene).setEnvironmentShowBackground(
+        runtimeScene,
+        showBackground
+      );
+    };
+
+    /**
+     * Check if the environment map is shown as the background of scenes.
+     */
+    export const isEnvironmentBackgroundShown = (
+      runtimeScene: gdjs.RuntimeScene
+    ): boolean =>
+      getPBRMaterialManager(runtimeScene).getEnvironmentShowBackground();
+
+    /**
+     * Set the brightness of the environment map shown as the background.
+     */
+    export const setEnvironmentBackgroundIntensity = (
+      runtimeScene: gdjs.RuntimeScene,
+      value: float
+    ) => {
+      getPBRMaterialManager(runtimeScene).setEnvironmentBackgroundIntensity(
+        runtimeScene,
+        value
+      );
+    };
+
+    /**
+     * Get the brightness of the environment map shown as the background.
+     */
+    export const getEnvironmentBackgroundIntensity = (
+      runtimeScene: gdjs.RuntimeScene
+    ): float =>
+      getPBRMaterialManager(runtimeScene).getEnvironmentBackgroundIntensity();
+
+    /**
+     * Set how blurry the environment map is when shown as the background.
+     */
+    export const setEnvironmentBackgroundBlurriness = (
+      runtimeScene: gdjs.RuntimeScene,
+      value: float
+    ) => {
+      getPBRMaterialManager(runtimeScene).setEnvironmentBackgroundBlurriness(
+        runtimeScene,
+        value
+      );
+    };
+
+    /**
+     * Get how blurry the environment map is when shown as the background.
+     */
+    export const getEnvironmentBackgroundBlurriness = (
+      runtimeScene: gdjs.RuntimeScene
+    ): float =>
+      getPBRMaterialManager(runtimeScene).getEnvironmentBackgroundBlurriness();
+
+    /**
+     * Set whether the environment map lights the materials (false only shows
+     * it as the background when enabled).
+     */
+    export const setEnvironmentAffectsMaterials = (
+      runtimeScene: gdjs.RuntimeScene,
+      affectsMaterials: boolean
+    ) => {
+      getPBRMaterialManager(runtimeScene).setEnvironmentAffectsMaterials(
+        runtimeScene,
+        affectsMaterials
+      );
+    };
+
+    /**
+     * Check if the environment map lights the materials.
+     */
+    export const environmentAffectsMaterials = (
+      runtimeScene: gdjs.RuntimeScene
+    ): boolean =>
+      getPBRMaterialManager(runtimeScene).getEnvironmentAffectsMaterials();
+
+    /**
      * Check if an environment map (image based lighting) is set.
      */
     export const hasEnvironmentMap = (
       runtimeScene: gdjs.RuntimeScene
-    ): boolean =>
-      getPBRMaterialManager(runtimeScene).getEnvironmentTexture() !== null;
+    ): boolean => getPBRMaterialManager(runtimeScene).hasEnvironmentMap();
   }
 }
