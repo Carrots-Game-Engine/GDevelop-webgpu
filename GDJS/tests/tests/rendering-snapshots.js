@@ -428,6 +428,7 @@ if (!isComparingRenderingSnapshots) {
       toneMapping,
     ];
 
+
     // Looking at the boxes from above, from the front left of the ground.
     const lookAtBoxesSource = `
     harness.lookAt({
@@ -778,6 +779,89 @@ if (!isComparingRenderingSnapshots) {
         `,
         });
       });
+    });
+
+    describe('3D volumetric fog', () => {
+      // A low sun, so that the shadows it casts are long enough to be seen in
+      // the fog as light shafts.
+      const lowSun = createEffectData('Sun', 'Scene3D::DirectionalLight', {
+        doubleParameters: { intensity: 1.2, elevation: 20, rotation: 30 },
+        stringParameters: {
+          color: '255;245;230',
+          top: 'Z+',
+          shadowQuality: 'high',
+        },
+        booleanParameters: { isCastingShadow: true },
+      });
+      const pillarObjects = [
+        ...groundAndBoxesObjects,
+        createCubeObjectData(
+          'Pillar',
+          { width: 70, height: 70, depth: 1000 },
+          { textureResourceName: woodTextureResourceName }
+        ),
+      ];
+      const pillarInstances = [
+        ...groundAndBoxesInstances,
+        // Cast shadows across the fog, where the light shafts are seen.
+        createInstanceData('Pillar', { x: 300, y: 500, z: 500 }),
+        createInstanceData('Pillar', { x: -500, y: -300, z: 500 }),
+      ];
+
+      /**
+       * @param {number} lightShafts
+       * @returns {EffectData}
+       */
+      const volumetricFog = (lightShafts) =>
+        createEffectData('Fog', 'Scene3D::VolumetricFog', {
+          doubleParameters: {
+            density: 0.0007,
+            height: 0,
+            heightFalloff: 0.0012,
+            maxDistance: 4000,
+            lightShafts,
+          },
+          stringParameters: {
+            color: '200;210;230',
+            quality: 'High',
+            top: 'Z+',
+          },
+        });
+
+      /** @type {Array<[string, number, EffectData[]]>} */
+      const lightShaftsCases = [
+        ['3d-height-fog', 0, []],
+        ['3d-light-shafts', 3, []],
+        // Combined with the other effects, which also read the depth of the
+        // scene and are applied after the fog.
+        [
+          '3d-volumetric-fog-with-effects',
+          1,
+          [ambientOcclusion, bloom, depthOfField, toneMapping],
+        ],
+      ];
+      for (const [snapshotName, lightShafts, otherEffects] of lightShaftsCases) {
+        it(`draws ${snapshotName}`, async () => {
+          await expectScreenshotsToMatchSnapshots({
+            scene: createSceneData(
+              [
+                createLayerData('', '3d', [
+                  lowSun,
+                  skyLight,
+                  volumetricFog(lightShafts),
+                  ...otherEffects,
+                ]),
+              ],
+              pillarObjects,
+              pillarInstances
+            ),
+            source: `
+            ${lookAtBoxesSource}
+            ${takeScreenshotSource(snapshotName)}
+          `,
+          });
+        });
+      }
     });
 
     describe('2D and 3D together', () => {

@@ -30,6 +30,7 @@ import { ExposureShader } from 'three/examples/jsm/shaders/ExposureShader';
 import { N8AOPass } from '../../../SharedLibs/ThreeAddons/src/n8ao/N8AOPass.js';
 import { SceneDepthRenderPass } from '../../../SharedLibs/ThreeAddons/src/SceneDepthRenderPass.js';
 import { DepthOfFieldPass } from '../../../SharedLibs/ThreeAddons/src/DepthOfFieldPass.js';
+import { VolumetricFogPass } from '../../../SharedLibs/ThreeAddons/src/VolumetricFogPass.js';
 import { LowResolutionBloomPass } from '../../../SharedLibs/ThreeAddons/src/LowResolutionBloomPass.js';
 
 declare global {
@@ -63,6 +64,7 @@ declare global {
       N8AOPass,
       SceneDepthRenderPass,
       DepthOfFieldPass,
+      VolumetricFogPass,
       LowResolutionBloomPass,
     };
   }

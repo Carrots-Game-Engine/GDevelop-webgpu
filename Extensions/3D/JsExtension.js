@@ -3818,6 +3818,105 @@ module.exports = {
           )
         );
     }
+    {
+      const effect = extension
+        .addEffect('VolumetricFog')
+        .setFullName(_('Fog (volumetric)'))
+        .setDescription(
+          _(
+            'Fog computed along the line of sight: it gets denser at a given height (height fog) and scatters the light of the sun where its shadows let it through, drawing light shafts. Put it before the bloom, the depth of field and the tone mapping, if any.'
+          )
+        )
+        .markAsNotWorkingForObjects()
+        .markAsOnlyWorkingFor3D()
+        .addIncludeFile('Extensions/3D/VolumetricFog.js');
+      const properties = effect.getProperties();
+      properties
+        .getOrCreate('color')
+        .setValue('200;210;230')
+        .setLabel(_('Color'))
+        .setType('color')
+        .setDescription(
+          _(
+            'Color of the light scattered by the fog, which is the one of the sky and of the ambient light.'
+          )
+        );
+      properties
+        .getOrCreate('density')
+        .setValue('0.0012')
+        .setLabel(_('Density'))
+        .setType('number')
+        .setDescription(
+          _(
+            'Density of the fog at its height. Usual values are between 0.0002 (light fog) and 0.005 (very thick fog).'
+          )
+        );
+      properties
+        .getOrCreate('height')
+        .setValue('0')
+        .setLabel(_('Height'))
+        .setType('number')
+        .setMeasurementUnit(gd.MeasurementUnit.getPixel())
+        .setDescription(
+          _(
+            'Height where the fog is the densest. The fog thins out above it and is the same below it.'
+          )
+        );
+      properties
+        .getOrCreate('heightFalloff')
+        .setValue('0.002')
+        .setLabel(_('Height falloff'))
+        .setType('number')
+        .setDescription(
+          _(
+            'How fast the fog thins out above its height, per pixel. 0 keeps the same fog at every height.'
+          )
+        );
+      properties
+        .getOrCreate('maxDistance')
+        .setValue('4000')
+        .setLabel(_('Maximum distance'))
+        .setType('number')
+        .setMeasurementUnit(gd.MeasurementUnit.getPixel())
+        .setDescription(
+          _(
+            'Distance after which the fog does not get denser, which limits the cost of the effect.'
+          )
+        );
+      properties
+        .getOrCreate('lightShafts')
+        .setValue('1')
+        .setLabel(_('Light shafts'))
+        .setType('number')
+        .setDescription(
+          _(
+            'Strength of the light shafts, drawn where the first directional light casting shadows reaches the fog. 0 disables them.'
+          )
+        );
+      properties
+        .getOrCreate('top')
+        .setValue('Z+')
+        .setLabel(_('3D world top'))
+        .setType('choice')
+        .addExtraInfo('Z+')
+        .addExtraInfo('Y-')
+        .setGroup(_('Orientation'));
+      properties
+        .getOrCreate('quality')
+        .setValue('Medium')
+        .setLabel(_('Quality'))
+        .setType('choice')
+        .addChoice('Performance', _('Fastest (recommended for mobile)'))
+        .addChoice('Low', _('Low'))
+        .addChoice('Medium', _('Medium'))
+        .addChoice('High', _('High'))
+        .addChoice('Ultra', _('Ultra (slowest)'))
+        .setDescription(
+          _(
+            'Higher qualities take more samples along the line of sight, giving a smoother fog but being slower to render.'
+          )
+        );
+    }
     // Don't forget to update the alert condition in Model3DEditor.js when
     // adding a new light.
 

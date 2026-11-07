@@ -313,6 +313,7 @@ module.exports = function (config) {
       `${gdjsRuntimePath}/Extensions/3D/HemisphereLight.js`,
       `${gdjsRuntimePath}/Extensions/3D/LinearFog.js`,
       `${gdjsRuntimePath}/Extensions/3D/ExponentialFog.js`,
+      `${gdjsRuntimePath}/Extensions/3D/VolumetricFog.js`,
       `${gdjsRuntimePath}/Extensions/3D/ExposureEffect.js`,
       `${gdjsRuntimePath}/Extensions/3D/HueAndSaturationEffect.js`,
       `${gdjsRuntimePath}/Extensions/3D/ToneMappingEffect.js`,
