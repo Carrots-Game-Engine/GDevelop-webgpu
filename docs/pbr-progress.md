@@ -82,3 +82,52 @@ with the same behaviour as before. Network sync data is additive.
 - The runtime and the editor cannot literally share the same source (the editor
   cannot import runtime TypeScript); the editor mirrors the runtime behaviour
   and must be kept in sync with `Extensions/3D/EnvironmentMapEffect.ts`.
+
+## 2026-11-07 — Phase 1 follow-up: texture quality and controls
+
+### Scope
+
+Anisotropic filtering, texture tiling (repeat/offset/rotation), normal map
+flip Y, and clear coat roughness for PBR materials.
+
+### Implementation
+
+- **Anisotropic filtering** (`pixi-image-manager.ts`) — smoothed 3D textures
+  now use mipmaps (`LinearMipmapLinearFilter`) and an anisotropic filtering of
+  `min(16, renderer capabilities)`, applied only when the texture is smoothed
+  (pixel-art textures stay `NearestFilter` with no mipmaps). `setMaxAnisotropy`
+  lowers the value for weak devices and re-applies it to the existing textures;
+  when no 3D renderer exists yet, a fallback of 8 is used and the value is
+  resolved again once the renderer is available.
+- **UV transforms** (`PBRMaterialManager.ts`) — `PBRMaterialSettings.uvTransform`
+  and `slotUvTransforms` apply a tiling/offset/rotation to the texture slots.
+  The shared textures of the image manager are never modified: a clone is made
+  only for a non-default transform, cached by (resource, color space, transform)
+  and reference counted by material, so copies (`makeUniqueMaterialCopy`,
+  `configureMaterial`) never double-dispose it. Clones are disposed when their
+  last user is gone, when their resource is unloaded, and on `dispose()`.
+- **Normal map flip Y** — `normalFlipY` flips the green channel of the normal
+  map (`normalScale.set(s, flip ? -s : s)`). The strength (`normalScale.x`) is
+  always positive, so changing the strength from events keeps the sign of Y and
+  changing the flip keeps the strength.
+- **Clear coat roughness** — `clearcoatRoughness` is a new float property
+  (0 by default). It does not force the physical material by itself: only
+  `clearcoat > 0`, `transmission > 0` or a non-default `ior` do. The physical
+  only fields (`ior`, `transmission`, `clearcoat`, `clearcoatRoughness`) are
+  only assigned to a `MeshPhysicalMaterial`. The `plastic` preset now uses
+  `clearcoatRoughness: 0.15`.
+- **Events** — the new features are exposed through `setPBRBoolean` /
+  `getPBRBoolean`, `setPBRTextureUvTransform` / `getPBRTextureUvTransform` and
+  the new `clearcoatRoughness` float property, plus a `MaxAnisotropy`
+  scene expression. The editor mirrors them in `pbrConfig.js` and
+  `PBRMaterialEditor/index.js`.
+
+### Verified / known points
+
+- Mipmapped filtering is now used for every smoothed 3D texture (not only PBR):
+  this reduces aliasing but is a visible change for the whole 3D rendering.
+- The UV transform only applies to the slots the settings actually set (a slot
+  left untouched keeps the texture of the original material and is never
+  cloned).
+- `Texture.clone()` already sets `needsUpdate` in three r185
+  (`Texture.copy` sets it), the explicit call is kept for clarity.
