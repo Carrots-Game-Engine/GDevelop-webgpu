@@ -131,6 +131,8 @@ export type InstancesEditorPropsWithoutSizeAndScroll = {|
   pauseRendering: boolean,
   /** The 3D camera the scene is seen through, if any. */
   camera3DPreview?: Camera3DPreview | null,
+  /** Return the up-to-date state of the 3D camera the scene is seen through. */
+  getCamera3DPreview?: () => Camera3DPreview | null,
   instancesEditorShortcutsCallbacks: InstancesEditorShortcutsCallbacks,
   tileMapTileSelection: ?TileMapTileSelection,
   onSelectTileMapTile: (?TileMapTileSelection) => void,
@@ -1922,7 +1924,9 @@ export default class InstancesEditor extends Component<Props, State> {
         // Set the camera preview on each frame so that changes made to the
         // camera (position, field of view...) are displayed right away.
         this.viewPosition.setCamera3DPreview(
-          this.props.camera3DPreview || null
+          (this.props.getCamera3DPreview
+            ? this.props.getCamera3DPreview()
+            : this.props.camera3DPreview) || null
         );
 
         this.instancesRenderer.render(

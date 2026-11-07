@@ -382,6 +382,7 @@ const SwipeableDrawerEditorsDisplay: React.ComponentType<{
                   onSelectTileMapTile={props.onSelectTileMapTile}
                   editorViewPosition2D={props.editorViewPosition2D}
                   camera3DPreview={props.camera3DPreview}
+                  getCamera3DPreview={props.getCamera3DPreview}
                 />
               )}
             </ErrorBoundary>

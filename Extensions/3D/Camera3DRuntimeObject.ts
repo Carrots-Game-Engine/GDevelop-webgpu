@@ -104,6 +104,7 @@ namespace gdjs {
       this._farPlaneDistance = content.farPlaneDistance || 2000;
       this._isOrthographic = content.projection === 'orthographic';
       this._zoom = content.zoom || 1;
+      this._isActive = content.activeAtStart === true;
       this._priority = content.priority || 0;
       this._blendDuration = content.blendDuration || 0;
 
@@ -225,6 +226,7 @@ namespace gdjs {
      */
     isActiveCamera(): boolean {
       return (
+        this._isActive &&
         this.getRuntimeScene().getCamera3DManager().getActiveCamera() === this
       );
     }

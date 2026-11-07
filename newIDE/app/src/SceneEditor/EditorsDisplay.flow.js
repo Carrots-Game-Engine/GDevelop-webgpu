@@ -161,6 +161,8 @@ export type SceneEditorsDisplayProps = {|
   editorViewPosition2D: EditorViewPosition2D,
   /** The 3D camera the scene editor is seen through, if any. */
   camera3DPreview?: Camera3DPreview | null,
+  /** Return the up-to-date state of the 3D camera the editor is seen through. */
+  getCamera3DPreview?: () => Camera3DPreview | null,
 
   historyHandler: HistoryHandler,
   unsavedChanges?: ?UnsavedChanges,

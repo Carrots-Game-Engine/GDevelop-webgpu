@@ -332,6 +332,8 @@ export default class SceneEditor extends React.Component<Props, State> {
   editorViewPosition2D: EditorViewPosition2D = { viewX: null, viewY: null };
   _reloadResourcesCounter: number = 0;
   _lastEmbeddedGameContextMenuScenePosition: ?[number, number, number] = null;
+  /** The instance of the 3D camera the scene is seen through, if any. */
+  _camera3DPreviewInstance: gdInitialInstance | null = null;
 
   constructor(props: Props) {
     super(props);
@@ -899,6 +901,7 @@ export default class SceneEditor extends React.Component<Props, State> {
       this.props.project !== nextProps.project
     ) {
       this.instancesSelection.clearSelection();
+      this._camera3DPreviewInstance = null;
       this.setState({ camera3DPreview: null });
       this.openSetupGrid(false);
       this.editInstanceVariables(null);
@@ -2727,12 +2730,24 @@ export default class SceneEditor extends React.Component<Props, State> {
     const camera3DPreview = this._getCamera3DPreviewFrame(instance);
     if (!camera3DPreview) return;
 
+    this._camera3DPreviewInstance = instance;
     this.setState({ camera3DPreview });
   };
 
   _stopCamera3DPreview = () => {
+    this._camera3DPreviewInstance = null;
     this.setState({ camera3DPreview: null });
   };
+
+  /**
+   * Return the up-to-date state of the camera the scene is seen through, so
+   * that the editor follows the edits made to the camera (position, angle,
+   * field of view...).
+   */
+  _getCurrentCamera3DPreview = (): Camera3DPreview | null =>
+    this._camera3DPreviewInstance
+      ? this._getCamera3DPreviewFrame(this._camera3DPreviewInstance)
+      : null;
 
   buildContextMenu = (i18n: I18nType, options: any): any => {
     if (
@@ -3441,6 +3456,7 @@ export default class SceneEditor extends React.Component<Props, State> {
                         }),
                     }}
                     camera3DPreview={this.state.camera3DPreview}
+                    getCamera3DPreview={this._getCurrentCamera3DPreview}
                     instancesEditorShortcutsCallbacks={{
                       onCopy: () =>
                         this.copySelection({ useLastCursorPosition: true }),

@@ -113,6 +113,15 @@ namespace gdjs {
       if (blendDuration !== undefined) {
         camera.setCamera3DBlendDuration(blendDuration);
       }
+
+      // Make the camera the active one right away, so that conditions like
+      // `isActiveCamera` are true in the same frame (the transition, if any,
+      // is started now and continues in `update`).
+      if (this._activeCamera !== camera) {
+        const previousActiveCamera = this._activeCamera;
+        this._activeCamera = camera;
+        this._startTransition(camera, previousActiveCamera);
+      }
     }
 
     /**
@@ -228,6 +237,18 @@ namespace gdjs {
       result.far = Math.max(camera.getCamera3DFarPlaneDistance(), result.near);
       // The Z position is explicit: it's not computed from the zoom.
       result.isZDirty = false;
+
+      // The size and the viewport are a configuration of the layer camera,
+      // not of the 3D camera object: keep them as they are.
+      const layerCamera = layer.getActiveCamera();
+      result.width = layerCamera.width;
+      result.height = layerCamera.height;
+      result.useDefaultSize = layerCamera.useDefaultSize;
+      result.viewportLeft = layerCamera.viewportLeft;
+      result.viewportTop = layerCamera.viewportTop;
+      result.viewportRight = layerCamera.viewportRight;
+      result.viewportBottom = layerCamera.viewportBottom;
+      result.useDefaultViewport = layerCamera.useDefaultViewport;
 
       if (camera.isCamera3DOrthographic()) {
         result.zoom = Math.max(camera.getCamera3DZoom(), 0.000001);

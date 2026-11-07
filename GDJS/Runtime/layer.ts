@@ -33,8 +33,50 @@ namespace gdjs {
       // the camera to set up the 3D rendering, before this constructor body).
       this.getActiveCamera();
 
+      // Restore the cameras declared in the project (their size and viewport).
+      // The position and the angle are runtime states: they start from the
+      // default camera position.
+      const camerasData = layerData.cameras || [];
+      if (camerasData.length > 0) {
+        const defaultCamera = this._createInitialCamera();
+        this._cameras = camerasData.map((cameraData) =>
+          this._createCameraFromData(cameraData, defaultCamera)
+        );
+        this._activeCameraIndex = 0;
+      }
+
       // Let the renderer do its final set up:
       this._renderer.onCreated();
+    }
+
+    /**
+     * Create a camera from the data of the project.
+     *
+     * @param cameraData The data of the camera in the project.
+     * @param defaultCamera The camera to copy the runtime state from.
+     */
+    private _createCameraFromData(
+      cameraData: CameraData,
+      defaultCamera: gdjs.LayerCamera
+    ): gdjs.LayerCamera {
+      const camera = defaultCamera.clone();
+      camera.useDefaultSize = cameraData.defaultSize !== false;
+      camera.width = cameraData.width || 0;
+      camera.height = cameraData.height || 0;
+      if (!camera.useDefaultSize && camera.width > 0) {
+        // The zoom is derived from the size so that the renderer shows the
+        // requested area of the scene.
+        camera.zoom = this.getWidth() / camera.width;
+        camera.isZDirty = true;
+      }
+      camera.useDefaultViewport = cameraData.defaultViewport !== false;
+      camera.viewportLeft = cameraData.viewportLeft || 0;
+      camera.viewportTop = cameraData.viewportTop || 0;
+      camera.viewportRight =
+        cameraData.viewportRight !== undefined ? cameraData.viewportRight : 1;
+      camera.viewportBottom =
+        cameraData.viewportBottom !== undefined ? cameraData.viewportBottom : 1;
+      return camera;
     }
 
     /**
@@ -117,6 +159,21 @@ namespace gdjs {
     }
 
     /**
+     * Get the state of a camera of the layer by its index, without the
+     * "camera 0 is the active camera" shortcut of `getCamera`.
+     *
+     * This is used by the renderer to display all the cameras of the layer.
+     *
+     * @param index The index of the camera in the list of cameras.
+     */
+    getCameraAtIndex(index: integer): gdjs.LayerCamera {
+      this.getActiveCamera();
+      const indexAsInteger = Math.floor(index);
+      if (indexAsInteger < 0) return this.getActiveCamera();
+      return this._cameras[indexAsInteger] || this.getActiveCamera();
+    }
+
+    /**
      * Add a camera to the layer, starting from the state of the active camera.
      *
      * @returns The ID of the new camera. It can then be used with the camera
@@ -125,6 +182,30 @@ namespace gdjs {
     addCamera(): integer {
       this._cameras.push(this.getActiveCamera().clone());
       return this._cameras.length - 1;
+    }
+
+    /**
+     * Delete a camera of the layer.
+     *
+     * The last camera of a layer can't be deleted: a layer always has at least
+     * one camera.
+     *
+     * @param cameraId The number of the camera to delete.
+     */
+    deleteCamera(cameraId: integer): void {
+      const index = Math.floor(cameraId);
+      if (index < 0 || index >= this.getCameraCount()) return;
+      if (this._cameras.length <= 1) return;
+
+      this._cameras.splice(index, 1);
+      if (this._activeCameraIndex > index) {
+        this._activeCameraIndex--;
+      } else if (this._activeCameraIndex === index) {
+        this._activeCameraIndex = Math.min(index, this._cameras.length - 1);
+      }
+      this._renderer.updateWorldScale();
+      this._renderer.updatePosition();
+      this._renderer.invalidateRotation();
     }
 
     /**
@@ -283,7 +364,10 @@ namespace gdjs {
      * @return The width of the camera
      */
     override getCameraWidth(cameraId?: integer): float {
-      return this.getWidth() / this.getCamera(cameraId).zoom;
+      const camera = this.getCamera(cameraId);
+      return camera.useDefaultSize || camera.width <= 0
+        ? this.getWidth() / camera.zoom
+        : camera.width;
     }
 
     /**
@@ -295,7 +379,116 @@ namespace gdjs {
      * @return The height of the camera
      */
     override getCameraHeight(cameraId?: integer): float {
-      return this.getHeight() / this.getCamera(cameraId).zoom;
+      const camera = this.getCamera(cameraId);
+      return camera.useDefaultSize || camera.height <= 0
+        ? this.getHeight() / camera.zoom
+        : camera.height;
+    }
+
+    /**
+     * Set the size of the rendered area of a camera.
+     *
+     * The zoom is reset so that the camera shows the requested size.
+     *
+     * @param width The new width, in scene units.
+     * @param height The new height, in scene units.
+     * @param cameraId The camera number. 0 (or nothing) designates the active
+     * camera.
+     */
+    override setCameraSize(
+      width: float,
+      height: float,
+      cameraId?: integer
+    ): void {
+      const camera = this.getCamera(cameraId);
+      camera.useDefaultSize = false;
+      camera.width = width > 0 ? width : this.getWidth();
+      camera.height = height > 0 ? height : this.getHeight();
+      if (width > 0) {
+        camera.zoom = this.getWidth() / width;
+      }
+      camera.isZDirty = true;
+      if (camera === this.getActiveCamera()) {
+        this._renderer.updateWorldScale();
+        this._renderer.updatePosition();
+      }
+    }
+
+    /**
+     * Get the left side of the area of the window where a camera is displayed.
+     *
+     * @param cameraId The camera number. 0 (or nothing) designates the active
+     * camera.
+     * @return A value between 0 and 1.
+     */
+    override getCameraViewportLeft(cameraId?: integer): float {
+      const camera = this.getCamera(cameraId);
+      return camera.useDefaultViewport ? 0 : camera.viewportLeft;
+    }
+
+    /**
+     * Get the top side of the area of the window where a camera is displayed.
+     *
+     * @param cameraId The camera number. 0 (or nothing) designates the active
+     * camera.
+     * @return A value between 0 and 1.
+     */
+    override getCameraViewportTop(cameraId?: integer): float {
+      const camera = this.getCamera(cameraId);
+      return camera.useDefaultViewport ? 0 : camera.viewportTop;
+    }
+
+    /**
+     * Get the right side of the area of the window where a camera is displayed.
+     *
+     * @param cameraId The camera number. 0 (or nothing) designates the active
+     * camera.
+     * @return A value between 0 and 1.
+     */
+    override getCameraViewportRight(cameraId?: integer): float {
+      const camera = this.getCamera(cameraId);
+      return camera.useDefaultViewport ? 1 : camera.viewportRight;
+    }
+
+    /**
+     * Get the bottom side of the area of the window where a camera is displayed.
+     *
+     * @param cameraId The camera number. 0 (or nothing) designates the active
+     * camera.
+     * @return A value between 0 and 1.
+     */
+    override getCameraViewportBottom(cameraId?: integer): float {
+      const camera = this.getCamera(cameraId);
+      return camera.useDefaultViewport ? 1 : camera.viewportBottom;
+    }
+
+    /**
+     * Set the area of the window where a camera is displayed.
+     *
+     * @param left The left side, between 0 and 1.
+     * @param top The top side, between 0 and 1.
+     * @param right The right side, between 0 and 1.
+     * @param bottom The bottom side, between 0 and 1.
+     * @param cameraId The camera number. 0 (or nothing) designates the active
+     * camera.
+     */
+    override setCameraViewport(
+      left: float,
+      top: float,
+      right: float,
+      bottom: float,
+      cameraId?: integer
+    ): void {
+      const camera = this.getCamera(cameraId);
+      camera.useDefaultViewport = false;
+      camera.viewportLeft = Math.min(Math.max(left, 0), 1);
+      camera.viewportTop = Math.min(Math.max(top, 0), 1);
+      camera.viewportRight = Math.min(Math.max(right, 0), 1);
+      camera.viewportBottom = Math.min(Math.max(bottom, 0), 1);
+      if (camera === this.getActiveCamera()) {
+        this._renderer.updateWorldScale();
+        this._renderer.updatePosition();
+      }
     }
 
     /**

@@ -6496,12 +6496,9 @@ module.exports = {
 
         this._threeObject = new THREE.Group();
         this._threeObject.rotation.order = 'ZYX';
-        // The camera is added to the root of the scene and not to the group
-        // mirroring the Y axis: the gizmo must be placed exactly where the
-        // camera is when the scene is played (the scene is mirrored on Y, and
-        // the camera is not a child of this mirroring).
-        const threeRoot = this._threeGroup.parent || this._threeGroup;
-        threeRoot.add(this._threeObject);
+        // The gizmo is added to the group of 3D objects of the layer by the
+        // instances renderer, like any other 3D object. It's therefore placed
+        // with the same convention as the other 3D objects of the editor.
 
         this._bodyMaterial = new THREE.MeshBasicMaterial({
           color: CAMERA_3D_INACTIVE_COLOR,
@@ -6546,10 +6543,7 @@ module.exports = {
       }
 
       onRemovedFromScene() {
-        const threeParent = this._threeObject ? this._threeObject.parent : null;
         super.onRemovedFromScene();
-        // The gizmo is not a child of the group used by the base class.
-        if (threeParent) threeParent.remove(this._threeObject);
 
         this._bodyGeometry.dispose();
         this._lensGeometry.dispose();
@@ -6651,18 +6645,20 @@ module.exports = {
         this._bodyMaterial.color.setHex(color);
         this._frustumMaterial.color.setHex(color);
 
-        // The camera of a layer is placed like any 3D object, except that the
-        // angle is applied on the Z axis and that the rotations around X and Y
-        // are the ones of the instance.
+        // The camera of a layer is placed like any 3D object of the editor: the
+        // scene is mirrored on Y, so the position and the angle are used as is.
+        // The angle is a roll of the view, which is why the runtime rotates the
+        // Three.js camera by the opposite angle (see `updatePosition` in
+        // `GDJS/Runtime/pixi-renderers/layer-pixi-renderer.ts`).
         this._threeObject.position.set(
           instance.getX(),
-          -instance.getY(),
+          instance.getY(),
           instance.getZ()
         );
         this._threeObject.rotation.set(
           Rendered3DInstance.toRad(instance.getRotationX()),
           Rendered3DInstance.toRad(instance.getRotationY()),
-          -Rendered3DInstance.toRad(instance.getAngle())
+          Rendered3DInstance.toRad(instance.getAngle())
         );
 
         const gameResolutionHeight = this._project.getGameResolutionHeight();

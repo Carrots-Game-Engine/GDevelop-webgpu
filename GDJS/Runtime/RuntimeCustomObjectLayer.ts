@@ -55,9 +55,15 @@ namespace gdjs {
       return this._camera;
     }
 
+    override getCameraAtIndex(index: integer): gdjs.LayerCamera {
+      return this._camera;
+    }
+
     override addCamera(): integer {
       return 0;
     }
+
+    override deleteCamera(cameraId: integer): void {}
 
     override setActiveCamera(cameraId: integer): void {}
 
@@ -91,6 +97,36 @@ namespace gdjs {
     override getCameraHeight(cameraId?: integer): float {
       return this.getHeight();
     }
+
+    override setCameraSize(
+      width: float,
+      height: float,
+      cameraId?: integer
+    ): void {}
+
+    override getCameraViewportLeft(cameraId?: integer): float {
+      return 0;
+    }
+
+    override getCameraViewportTop(cameraId?: integer): float {
+      return 0;
+    }
+
+    override getCameraViewportRight(cameraId?: integer): float {
+      return 1;
+    }
+
+    override getCameraViewportBottom(cameraId?: integer): float {
+      return 1;
+    }
+
+    override setCameraViewport(
+      left: float,
+      top: float,
+      right: float,
+      bottom: float,
+      cameraId?: integer
+    ): void {}
 
     override setCameraZoom(newZoom: float, cameraId?: integer): void {}
 

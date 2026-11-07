@@ -38,7 +38,7 @@ namespace gdjs {
         if (!instanceContainer.hasLayer(layer)) {
           return 0;
         }
-        return instanceContainer.getLayer(layer).getCameraX();
+        return instanceContainer.getLayer(layer).getCameraX(cameraId);
       };
 
       export const getCameraY = function (
@@ -49,7 +49,7 @@ namespace gdjs {
         if (!instanceContainer.hasLayer(layer)) {
           return 0;
         }
-        return instanceContainer.getLayer(layer).getCameraY();
+        return instanceContainer.getLayer(layer).getCameraY(cameraId);
       };
 
       export const getCameraWidth = function (
@@ -60,7 +60,7 @@ namespace gdjs {
         if (!instanceContainer.hasLayer(layer)) {
           return 0;
         }
-        return instanceContainer.getLayer(layer).getCameraWidth();
+        return instanceContainer.getLayer(layer).getCameraWidth(cameraId);
       };
 
       export const getCameraHeight = function (
@@ -71,7 +71,175 @@ namespace gdjs {
         if (!instanceContainer.hasLayer(layer)) {
           return 0;
         }
-        return instanceContainer.getLayer(layer).getCameraHeight();
+        return instanceContainer.getLayer(layer).getCameraHeight(cameraId);
+      };
+
+      /**
+       * Add a camera to a layer, starting from the state of the active camera.
+       *
+       * @param instanceContainer the container owning the layer
+       * @param layer The name of the layer
+       * @param width The width of the rendered area (optional)
+       * @param height The height of the rendered area (optional)
+       * @param viewportLeft The left side of the render zone, between 0 and 1 (optional)
+       * @param viewportTop The top side of the render zone, between 0 and 1 (optional)
+       * @param viewportRight The right side of the render zone, between 0 and 1 (optional)
+       * @param viewportBottom The bottom side of the render zone, between 0 and 1 (optional)
+       * @return The number of the new camera.
+       */
+      export const addCamera = function (
+        instanceContainer: gdjs.RuntimeInstanceContainer,
+        layer: string,
+        width: float,
+        height: float,
+        viewportLeft: float,
+        viewportTop: float,
+        viewportRight: float,
+        viewportBottom: float
+      ): number {
+        if (!instanceContainer.hasLayer(layer)) {
+          return 0;
+        }
+        const layerObject = instanceContainer.getLayer(layer);
+        const cameraId = layerObject.addCamera();
+        if (width > 0 || height > 0) {
+          layerObject.setCameraSize(width, height, cameraId);
+        }
+        if (
+          viewportLeft !== 0 ||
+          viewportTop !== 0 ||
+          viewportRight !== 1 ||
+          viewportBottom !== 1
+        ) {
+          layerObject.setCameraViewport(
+            viewportLeft,
+            viewportTop,
+            viewportRight,
+            viewportBottom,
+            cameraId
+          );
+        }
+        return cameraId;
+      };
+
+      /**
+       * Delete a camera of a layer.
+       *
+       * @param instanceContainer the container owning the layer
+       * @param layer The name of the layer
+       * @param cameraId The number of the camera to delete
+       */
+      export const deleteCamera = function (
+        instanceContainer: gdjs.RuntimeInstanceContainer,
+        layer: string,
+        cameraId: integer
+      ) {
+        if (!instanceContainer.hasLayer(layer)) {
+          return;
+        }
+        instanceContainer.getLayer(layer).deleteCamera(cameraId);
+      };
+
+      /**
+       * Change the size of the rendered area of a camera.
+       *
+       * @param instanceContainer the container owning the layer
+       * @param layer The name of the layer
+       * @param cameraId The camera number
+       * @param width The new width, in scene units
+       * @param height The new height, in scene units
+       */
+      export const setCameraSize = function (
+        instanceContainer: gdjs.RuntimeInstanceContainer,
+        layer: string,
+        cameraId: integer,
+        width: float,
+        height: float
+      ) {
+        if (!instanceContainer.hasLayer(layer)) {
+          return;
+        }
+        instanceContainer
+          .getLayer(layer)
+          .setCameraSize(width, height, cameraId);
+      };
+
+      /**
+       * Change the area of the window where a camera is displayed.
+       *
+       * @param instanceContainer the container owning the layer
+       * @param layer The name of the layer
+       * @param cameraId The camera number
+       * @param left The left side, between 0 and 1
+       * @param top The top side, between 0 and 1
+       * @param right The right side, between 0 and 1
+       * @param bottom The bottom side, between 0 and 1
+       */
+      export const setCameraViewport = function (
+        instanceContainer: gdjs.RuntimeInstanceContainer,
+        layer: string,
+        cameraId: integer,
+        left: float,
+        top: float,
+        right: float,
+        bottom: float
+      ) {
+        if (!instanceContainer.hasLayer(layer)) {
+          return;
+        }
+        instanceContainer
+          .getLayer(layer)
+          .setCameraViewport(left, top, right, bottom, cameraId);
+      };
+
+      export const getCameraViewportLeft = function (
+        instanceContainer: gdjs.RuntimeInstanceContainer,
+        layer: string,
+        cameraId: integer
+      ): number {
+        if (!instanceContainer.hasLayer(layer)) {
+          return 0;
+        }
+        return instanceContainer
+          .getLayer(layer)
+          .getCameraViewportLeft(cameraId);
+      };
+
+      export const getCameraViewportTop = function (
+        instanceContainer: gdjs.RuntimeInstanceContainer,
+        layer: string,
+        cameraId: integer
+      ): number {
+        if (!instanceContainer.hasLayer(layer)) {
+          return 0;
+        }
+        return instanceContainer.getLayer(layer).getCameraViewportTop(cameraId);
+      };
+
+      export const getCameraViewportRight = function (
+        instanceContainer: gdjs.RuntimeInstanceContainer,
+        layer: string,
+        cameraId: integer
+      ): number {
+        if (!instanceContainer.hasLayer(layer)) {
+          return 1;
+        }
+        return instanceContainer
+          .getLayer(layer)
+          .getCameraViewportRight(cameraId);
+      };
+
+      export const getCameraViewportBottom = function (
+        instanceContainer: gdjs.RuntimeInstanceContainer,
+        layer: string,
+        cameraId: integer
+      ): number {
+        if (!instanceContainer.hasLayer(layer)) {
+          return 1;
+        }
+        return instanceContainer
+          .getLayer(layer)
+          .getCameraViewportBottom(cameraId);
       };
 
       export const getCameraBorderLeft = function (

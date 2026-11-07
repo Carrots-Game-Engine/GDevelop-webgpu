@@ -28,6 +28,18 @@ namespace gdjs {
     near?: float;
     far?: float;
     isZDirty?: boolean;
+    /** The size of the rendered area, in scene units. */
+    width?: float;
+    height?: float;
+    /** True when the size is the one of the game resolution (divided by the zoom). */
+    useDefaultSize?: boolean;
+    /** The area of the window where the camera is displayed, between 0 and 1. */
+    viewportLeft?: float;
+    viewportTop?: float;
+    viewportRight?: float;
+    viewportBottom?: float;
+    /** True when the viewport is the whole window. */
+    useDefaultViewport?: boolean;
   };
 
   /**
@@ -71,6 +83,31 @@ namespace gdjs {
      * position, or the Z position was never set).
      */
     isZDirty: boolean = true;
+    /**
+     * The width of the rendered area, in scene units.
+     *
+     * Only used when `useDefaultSize` is false. Otherwise, the width is the
+     * one of the game resolution divided by the zoom.
+     */
+    width: float = 0;
+    /**
+     * The height of the rendered area, in scene units.
+     *
+     * Only used when `useDefaultSize` is false.
+     */
+    height: float = 0;
+    /** True when the size is the one of the game resolution (divided by the zoom). */
+    useDefaultSize: boolean = true;
+    /** The left side of the area of the window where the camera is displayed, between 0 and 1. */
+    viewportLeft: float = 0;
+    /** The top side of the area of the window where the camera is displayed, between 0 and 1. */
+    viewportTop: float = 0;
+    /** The right side of the area of the window where the camera is displayed, between 0 and 1. */
+    viewportRight: float = 1;
+    /** The bottom side of the area of the window where the camera is displayed, between 0 and 1. */
+    viewportBottom: float = 1;
+    /** True when the camera is displayed on the whole window. */
+    useDefaultViewport: boolean = true;
 
     constructor(data?: LayerCameraData) {
       if (data) this.copyFrom(data);
@@ -93,6 +130,24 @@ namespace gdjs {
       if (data.near !== undefined) this.near = data.near;
       if (data.far !== undefined) this.far = data.far;
       if (data.isZDirty !== undefined) this.isZDirty = data.isZDirty;
+      if (data.width !== undefined) this.width = data.width;
+      if (data.height !== undefined) this.height = data.height;
+      if (data.useDefaultSize !== undefined) {
+        this.useDefaultSize = data.useDefaultSize;
+      }
+      if (data.viewportLeft !== undefined) {
+        this.viewportLeft = data.viewportLeft;
+      }
+      if (data.viewportTop !== undefined) this.viewportTop = data.viewportTop;
+      if (data.viewportRight !== undefined) {
+        this.viewportRight = data.viewportRight;
+      }
+      if (data.viewportBottom !== undefined) {
+        this.viewportBottom = data.viewportBottom;
+      }
+      if (data.useDefaultViewport !== undefined) {
+        this.useDefaultViewport = data.useDefaultViewport;
+      }
     }
 
     clone(): LayerCamera {
@@ -114,7 +169,15 @@ namespace gdjs {
         Math.abs(this.fov - other.fov) <= epsilon &&
         Math.abs(this.near - other.near) <= epsilon &&
         Math.abs(this.far - other.far) <= epsilon &&
-        this.isZDirty === other.isZDirty
+        this.isZDirty === other.isZDirty &&
+        Math.abs(this.width - other.width) <= epsilon &&
+        Math.abs(this.height - other.height) <= epsilon &&
+        this.useDefaultSize === other.useDefaultSize &&
+        Math.abs(this.viewportLeft - other.viewportLeft) <= epsilon &&
+        Math.abs(this.viewportTop - other.viewportTop) <= epsilon &&
+        Math.abs(this.viewportRight - other.viewportRight) <= epsilon &&
+        Math.abs(this.viewportBottom - other.viewportBottom) <= epsilon &&
+        this.useDefaultViewport === other.useDefaultViewport
       );
     }
 
@@ -152,6 +215,16 @@ namespace gdjs {
       result.near = from.near + (to.near - from.near) * ratio;
       result.far = from.far + (to.far - from.far) * ratio;
       result.isZDirty = false;
+      // The size and the viewport are not part of the animated state: they
+      // are taken from the target camera.
+      result.width = to.width;
+      result.height = to.height;
+      result.useDefaultSize = to.useDefaultSize;
+      result.viewportLeft = to.viewportLeft;
+      result.viewportTop = to.viewportTop;
+      result.viewportRight = to.viewportRight;
+      result.viewportBottom = to.viewportBottom;
+      result.useDefaultViewport = to.useDefaultViewport;
       return result;
     }
   }

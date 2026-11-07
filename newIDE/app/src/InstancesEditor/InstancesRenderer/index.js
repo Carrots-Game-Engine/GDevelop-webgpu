@@ -287,7 +287,12 @@ export default class InstancesRenderer {
       const threePlaneMesh = layerRenderer.getThreePlaneMesh();
       if (threeCamera && threePlaneMesh) {
         viewPosition.applyTransformationToThree(threeCamera, threePlaneMesh);
-        threeCamera.fov = layer.getCamera3DFieldOfView();
+        // When the scene is seen through a 3D camera, the projection is set
+        // from the camera itself (see `applyTransformationToThree`).
+        if (!viewPosition.isCamera3DPreviewEnabled()) {
+          threeCamera.fov = layer.getCamera3DFieldOfView();
+          threeCamera.updateProjectionMatrix();
+        }
       }
 
       if (!threeRenderer) {

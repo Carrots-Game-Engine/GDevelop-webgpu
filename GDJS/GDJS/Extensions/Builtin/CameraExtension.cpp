@@ -144,119 +144,23 @@ CameraExtension::CameraExtension() {
   GetAllActions()["SetLayerAmbientLightColor"].SetFunctionName(
       "gdjs.evtTools.camera.setLayerAmbientLightColor");
 
-  StripUnimplementedInstructionsAndExpressions();  // Unimplemented things are
-                                                   // listed here:
-  /*
-      AddAction("AddCamera",
-                     _("Add a camera to a layer"),
-                     _("This action add a camera to a layer"),
-                     _("Add a camera to layer _PARAM1_"),
-                     _("Layers and cameras"),
-                     "res/actions/camera24.png",
-                     "res/actions/camera.png")
-          .AddCodeOnlyParameter("currentScene", "")
-          .AddParameter("layer", _("Layer (base layer if
-     empty)")).SetDefaultValue("\"\"") .AddParameter("expression", _("Width"),
-     "",true) .AddParameter("expression", _("Height"), "",true)
-          .AddParameter("expression", _("Render zone: Top left side: X Position
-     ( Between 0 and 1 )"), "",true) .AddParameter("expression", _("Render zone:
-     Top left side: Y Position ( Between 0 and 1 )"), "",true)
-          .AddParameter("expression", _("Render zone: Bottom right side: X
-     Position ( Between 0 and 1 )"), "",true) .AddParameter("expression",
-     _("Render zone: Bottom right side: Y Position ( Between 0 and 1 )"),
-     "",true)
-          .SetFunctionName("AddCamera");
+  GetAllActions()["AddCamera"].SetFunctionName(
+      "gdjs.evtTools.camera.addCamera");
+  GetAllActions()["DeleteCamera"].SetFunctionName(
+      "gdjs.evtTools.camera.deleteCamera");
+  GetAllActions()["CameraSize"].SetFunctionName(
+      "gdjs.evtTools.camera.setCameraSize");
+  GetAllActions()["CameraViewport"].SetFunctionName(
+      "gdjs.evtTools.camera.setCameraViewport");
+  GetAllExpressions()["CameraViewportLeft"].SetFunctionName(
+      "gdjs.evtTools.camera.getCameraViewportLeft");
+  GetAllExpressions()["CameraViewportTop"].SetFunctionName(
+      "gdjs.evtTools.camera.getCameraViewportTop");
+  GetAllExpressions()["CameraViewportRight"].SetFunctionName(
+      "gdjs.evtTools.camera.getCameraViewportRight");
+  GetAllExpressions()["CameraViewportBottom"].SetFunctionName(
+      "gdjs.evtTools.camera.getCameraViewportBottom");
 
-      AddAction("DeleteCamera",
-                     _("Delete a camera of a layer"),
-                     _("Remove the specified camera from a layer"),
-                     _("Delete camera _PARAM2_ from layer _PARAM1_"),
-                     _("Layers and cameras"),
-                     "res/actions/camera24.png",
-                     "res/actions/camera.png")
-          .AddCodeOnlyParameter("currentScene", "")
-          .AddParameter("layer", _("Layer (base layer if
-     empty)")).SetDefaultValue("\"\"") .AddParameter("expression", _("Camera
-     number"))
-          .SetFunctionName("DeleteCamera");
-
-      AddAction("CameraSize",
-                     _("Modify the size of a camera"),
-                     _("This action modify the size of a camera of the specified
-     layer. The zoom will be reset."),
-                     _("Change the size of camera _PARAM2_ of _PARAM1_ to
-     _PARAM3_*_PARAM4_"),
-                     _("Layers and cameras"),
-                     "res/actions/camera24.png",
-                     "res/actions/camera.png")
-          .AddCodeOnlyParameter("currentScene", "")
-          .AddParameter("layer", _("Layer (base layer if
-     empty)")).SetDefaultValue("\"\"") .AddParameter("expression", _("Camera
-     number")) .AddParameter("expression", _("Width"))
-          .AddParameter("expression", _("Height"))
-          .SetFunctionName("SetCameraSize");
-
-      AddAction("CameraViewport",
-                     _("Modify the render zone of a camera"),
-                     _("This action modify the render zone of a camera of the
-     specified layer."),
-                     _("Set the render zone of camera _PARAM2_ from layer
-     _PARAM1_ to PARAM3_;_PARAM4_ _PARAM5_;_PARAM6_"),
-                     _("Layers and cameras"),
-                     "res/actions/camera24.png",
-                     "res/actions/camera.png")
-          .AddCodeOnlyParameter("currentScene", "")
-          .AddParameter("layer", _("Layer (base layer if
-     empty)")).SetDefaultValue("\"\"") .AddParameter("expression", _("Camera
-     number")) .AddParameter("expression", _("Render zone: Top left side: X
-     Position ( Between 0 and 1 )")) .AddParameter("expression", _("Render zone:
-     Top left side: X Position ( Between 0 and 1 )"))
-          .AddParameter("expression", _("Render zone: Bottom right side: X
-     Position ( Between 0 and 1 )")) .AddParameter("expression", _("Render zone:
-     Bottom right side: X Position ( Between 0 and 1 )"))
-          .SetFunctionName("SetCameraViewport");
-
-      AddExpression("CameraViewportLeft", _("X position of the top left side
-     point of a render zone"), _("X position of the top left side point of a
-     render zone"), _("Camera"), "res/actions/camera.png")
-          .AddCodeOnlyParameter("currentScene", "")
-          .AddParameter("layer", _("Layer"))
-          .AddParameter("expression", _("Camera number (default :
-     0)")).SetDefaultValue("0")
-          .SetFunctionName("GetCameraViewportLeft");
-
-
-      AddExpression("CameraViewportTop", _("Y position of the top left side
-     point of a render zone"), _("Y position of the top left side point of a
-     render zone"), _("Camera"), "res/actions/camera.png")
-          .AddCodeOnlyParameter("currentScene", "")
-          .AddParameter("layer", _("Layer"))
-          .AddParameter("expression", _("Camera number (default :
-     0)")).SetDefaultValue("0")
-          .SetFunctionName("GetCameraViewportTop");
-
-
-      AddExpression("CameraViewportRight", _("X position of the bottom right
-     side point of a render zone"), _("X position of the bottom right side point
-     of a render zone"), _("Camera"), "res/actions/camera.png")
-          .AddCodeOnlyParameter("currentScene", "")
-          .AddParameter("layer", _("Layer"))
-          .AddParameter("expression", _("Camera number (default :
-     0)")).SetDefaultValue("0")
-          .SetFunctionName("GetCameraViewportRight");
-
-
-      AddExpression("CameraViewportBottom", _("Y position of the bottom right
-     side point of a render zone"), _("Y position of the bottom right side point
-     of a render zone"), _("Camera"), "res/actions/camera.png")
-          .AddCodeOnlyParameter("currentScene", "")
-          .AddParameter("layer", _("Layer"))
-          .AddParameter("expression", _("Camera number (default :
-     0)")).SetDefaultValue("0")
-          .SetFunctionName("GetCameraViewportBottom");
-
-
-  */
 }
 
 }  // namespace gdjs

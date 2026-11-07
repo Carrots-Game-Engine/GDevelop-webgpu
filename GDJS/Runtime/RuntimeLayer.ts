@@ -336,6 +336,14 @@ namespace gdjs {
     abstract getCamera(cameraId?: integer): gdjs.LayerCamera;
 
     /**
+     * Get the state of a camera by its index, without the "camera 0 is the
+     * active camera" shortcut of `getCamera`.
+     *
+     * @param index The index of the camera in the list of cameras.
+     */
+    abstract getCameraAtIndex(index: integer): gdjs.LayerCamera;
+
+    /**
      * Add a camera to the layer, starting from the state of the active camera.
      *
      * @returns The ID of the new camera.
@@ -357,6 +365,71 @@ namespace gdjs {
      */
     abstract applyCameraState(
       state: gdjs.LayerCamera,
+      cameraId?: integer
+    ): void;
+
+    /**
+     * Delete a camera of the layer.
+     *
+     * @param cameraId The number of the camera to delete.
+     */
+    abstract deleteCamera(cameraId: integer): void;
+
+    /**
+     * Set the size of the rendered area of a camera.
+     *
+     * @param width The new width, in scene units.
+     * @param height The new height, in scene units.
+     * @param cameraId The camera number.
+     */
+    abstract setCameraSize(
+      width: float,
+      height: float,
+      cameraId?: integer
+    ): void;
+
+    /**
+     * Get the left side of the area of the window where a camera is displayed.
+     *
+     * @param cameraId The camera number.
+     */
+    abstract getCameraViewportLeft(cameraId?: integer): float;
+
+    /**
+     * Get the top side of the area of the window where a camera is displayed.
+     *
+     * @param cameraId The camera number.
+     */
+    abstract getCameraViewportTop(cameraId?: integer): float;
+
+    /**
+     * Get the right side of the area of the window where a camera is displayed.
+     *
+     * @param cameraId The camera number.
+     */
+    abstract getCameraViewportRight(cameraId?: integer): float;
+
+    /**
+     * Get the bottom side of the area of the window where a camera is displayed.
+     *
+     * @param cameraId The camera number.
+     */
+    abstract getCameraViewportBottom(cameraId?: integer): float;
+
+    /**
+     * Set the area of the window where a camera is displayed.
+     *
+     * @param left The left side, between 0 and 1.
+     * @param top The top side, between 0 and 1.
+     * @param right The right side, between 0 and 1.
+     * @param bottom The bottom side, between 0 and 1.
+     * @param cameraId The camera number.
+     */
+    abstract setCameraViewport(
+      left: float,
+      top: float,
+      right: float,
+      bottom: float,
       cameraId?: integer
     ): void;
 

@@ -260,4 +260,51 @@ describe('gdjs.Layer with multiple cameras', () => {
     // The interpolated Z position is explicit.
     expect(result.isZDirty).to.be(false);
   });
+
+  it('sets the size of a camera', () => {
+    const { layer } = makeSceneWithLayer('2d');
+    layer.addCamera();
+
+    layer.setCameraSize(1000, 400, 1);
+
+    expect(layer.getCameraWidth(1)).to.be(1000);
+    expect(layer.getCameraHeight(1)).to.be(400);
+    // The zoom is derived from the size so that the renderer shows the
+    // requested area.
+    expect(layer.getCameraZoom(1)).to.be.within(0.7999, 0.8001);
+    // The active camera is not changed.
+    expect(layer.getCameraWidth()).to.be(layer.getWidth());
+  });
+
+  it('sets the viewport of a camera', () => {
+    const { layer } = makeSceneWithLayer('2d');
+    layer.addCamera();
+
+    layer.setCameraViewport(0, 0, 0.5, 1, 1);
+
+    expect(layer.getCameraViewportLeft(1)).to.be(0);
+    expect(layer.getCameraViewportTop(1)).to.be(0);
+    expect(layer.getCameraViewportRight(1)).to.be(0.5);
+    expect(layer.getCameraViewportBottom(1)).to.be(1);
+    // The active camera is not changed.
+    expect(layer.getCameraViewportRight()).to.be(1);
+  });
+
+  it('deletes a camera and keeps the active camera valid', () => {
+    const { layer } = makeSceneWithLayer('2d');
+    layer.addCamera();
+    layer.addCamera();
+    layer.setActiveCamera(2);
+
+    layer.deleteCamera(1);
+
+    expect(layer.getCameraCount()).to.be(2);
+    expect(layer.getActiveCameraIndex()).to.be(1);
+
+    layer.deleteCamera(1);
+    expect(layer.getCameraCount()).to.be(1);
+    // The last camera can't be deleted.
+    layer.deleteCamera(0);
+    expect(layer.getCameraCount()).to.be(1);
+  });
 });

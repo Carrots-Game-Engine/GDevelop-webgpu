@@ -126,6 +126,9 @@ namespace gdjs {
 
           const runtimeLayerRenderer = runtimeLayer.getRenderer();
           const runtimeLayerRenderingType = runtimeLayer.getRenderingType();
+          const camerasToRender = this._getCamerasToRender(runtimeLayer);
+          const isMultiCamera = camerasToRender.length > 1;
+          const activeCameraIndex = runtimeLayer.getActiveCameraIndex();
 
           if (!this._shouldRenderLayerIn3D(runtimeLayer)) {
             // Render a layer with 2D rendering (PixiJS).
@@ -156,7 +159,28 @@ namespace gdjs {
                 runtimeLayerRenderer.getLightingSprite()) ||
               runtimeLayerRenderer.getRendererObject();
 
-            pixiRenderer.render(pixiContainer, { clear: false });
+            if (isMultiCamera) {
+              for (const { cameraIndex, viewport } of camerasToRender) {
+                if (viewport.width <= 0 || viewport.height <= 0) continue;
+                if (runtimeLayer.getActiveCameraIndex() !== cameraIndex) {
+                  runtimeLayer.setActiveCamera(cameraIndex);
+                } else {
+                  runtimeLayerRenderer.updatePosition();
+                }
+                this._renderPixiContainerInViewport(
+                  pixiRenderer,
+                  pixiContainer,
+                  viewport
+                );
+              }
+              // Restore the whole canvas for the next layers.
+              pixiRenderer.renderTexture.bind(undefined);
+              if (runtimeLayer.getActiveCameraIndex() !== activeCameraIndex) {
+                runtimeLayer.setActiveCamera(activeCameraIndex);
+              }
+            } else {
+              pixiRenderer.render(pixiContainer, { clear: false });
+            }
             this._layerRenderingMetrics.rendered2DLayersCount++;
 
             lastRenderWas3D = false;
@@ -169,105 +193,135 @@ namespace gdjs {
 
             // Render the 3D objects of this layer.
             if (threeScene && threeCamera && threeEffectComposer) {
-              // TODO (3D) - optimization: do this at the beginning for all layers that are 2d+3d?
-              // So the second pass is clearer (just rendering 2d or 3d layers without doing PixiJS renders in between).
-              if (
-                runtimeLayerRenderingType ===
-                gdjs.RuntimeLayerRenderingType.TWO_D_PLUS_THREE_D
-              ) {
+              if (isMultiCamera) {
                 const layerHas2DObjectsToRender =
+                  runtimeLayerRenderingType ===
+                    gdjs.RuntimeLayerRenderingType.TWO_D_PLUS_THREE_D &&
                   runtimeLayerRenderer.has2DObjects();
-
+                this._render3DLayerWithMultipleCameras(
+                  runtimeLayer,
+                  runtimeLayerRenderer,
+                  threeRenderer,
+                  pixiRenderer,
+                  threeScene,
+                  threeEffectComposer,
+                  camerasToRender,
+                  activeCameraIndex,
+                  backgroundColor,
+                  isBackgroundColorForced,
+                  shouldClearCanvas,
+                  isFirstRender,
+                  lastRenderWas3D
+                );
                 if (layerHas2DObjectsToRender) {
-                  if (lastRenderWas3D) {
-                    // Ensure the state is clean for PixiJS to render.
-                    threeRenderer.resetState();
-                    pixiRenderer.reset();
+                  this._layerRenderingMetrics.rendered2DLayersCount++;
+                }
+                this._layerRenderingMetrics.rendered3DLayersCount++;
+                isFirstRender = false;
+                lastRenderWas3D = true;
+              } else {
+                // TODO (3D) - optimization: do this at the beginning for all layers that are 2d+3d?
+                // So the second pass is clearer (just rendering 2d or 3d layers without doing PixiJS renders in between).
+                if (
+                  runtimeLayerRenderingType ===
+                  gdjs.RuntimeLayerRenderingType.TWO_D_PLUS_THREE_D
+                ) {
+                  const layerHas2DObjectsToRender =
+                    runtimeLayerRenderer.has2DObjects();
+
+                  if (layerHas2DObjectsToRender) {
+                    if (lastRenderWas3D) {
+                      // Ensure the state is clean for PixiJS to render.
+                      threeRenderer.resetState();
+                      pixiRenderer.reset();
+                    }
+
+                    // Do the rendering of the PixiJS objects of the layer on the render texture.
+                    // Then, update the texture of the plane showing the PixiJS rendering,
+                    // so that the 2D rendering made by PixiJS can be shown in the 3D world.
+                    runtimeLayerRenderer.renderOnPixiRenderTexture(
+                      pixiRenderer
+                    );
+                    runtimeLayerRenderer.updateThreePlaneTextureFromPixiRenderTexture(
+                      // The renderers are needed to find the internal WebGL texture.
+                      threeRenderer,
+                      pixiRenderer
+                    );
+                    this._layerRenderingMetrics.rendered2DLayersCount++;
+
+                    lastRenderWas3D = false;
+                  }
+                  runtimeLayerRenderer.show2DRenderingPlane(
+                    layerHas2DObjectsToRender
+                  );
+                }
+
+                if (!lastRenderWas3D) {
+                  // It's important to reset the internal WebGL state of PixiJS, then Three.js
+                  // to ensure the 3D rendering is made properly by Three.js
+                  pixiRenderer.reset();
+                  threeRenderer.resetState();
+                }
+
+                // The background shown by an effect (a skybox), replaced by
+                // the forced background color while this layer is drawn.
+                let replacedThreeSceneBackground:
+                  | THREE.Color
+                  | THREE.Texture
+                  | null = null;
+                if (isFirstRender) {
+                  // Render the background color.
+                  threeRenderer.setClearColor(backgroundColor);
+                  threeRenderer.resetState();
+                  if (shouldClearCanvas) threeRenderer.clear();
+                  if (!this._backgroundColor) {
+                    this._backgroundColor = new THREE.Color();
+                  }
+                  this._backgroundColor.set(backgroundColor);
+                  if (
+                    isBackgroundColorForced &&
+                    threeScene.background &&
+                    threeScene.background !== this._backgroundColor
+                  ) {
+                    replacedThreeSceneBackground = threeScene.background;
+                    threeScene.background = this._backgroundColor;
+                  }
+                  if (!threeScene.background) {
+                    threeScene.background = this._backgroundColor;
                   }
 
-                  // Do the rendering of the PixiJS objects of the layer on the render texture.
-                  // Then, update the texture of the plane showing the PixiJS rendering,
-                  // so that the 2D rendering made by PixiJS can be shown in the 3D world.
-                  runtimeLayerRenderer.renderOnPixiRenderTexture(pixiRenderer);
-                  runtimeLayerRenderer.updateThreePlaneTextureFromPixiRenderTexture(
-                    // The renderers are needed to find the internal WebGL texture.
-                    threeRenderer,
-                    pixiRenderer
-                  );
-                  this._layerRenderingMetrics.rendered2DLayersCount++;
-
-                  lastRenderWas3D = false;
-                }
-                runtimeLayerRenderer.show2DRenderingPlane(
-                  layerHas2DObjectsToRender
-                );
-              }
-
-              if (!lastRenderWas3D) {
-                // It's important to reset the internal WebGL state of PixiJS, then Three.js
-                // to ensure the 3D rendering is made properly by Three.js
-                pixiRenderer.reset();
-                threeRenderer.resetState();
-              }
-
-              // The background shown by an effect (a skybox), replaced by
-              // the forced background color while this layer is drawn.
-              let replacedThreeSceneBackground:
-                | THREE.Color
-                | THREE.Texture
-                | null = null;
-              if (isFirstRender) {
-                // Render the background color.
-                threeRenderer.setClearColor(backgroundColor);
-                threeRenderer.resetState();
-                if (shouldClearCanvas) threeRenderer.clear();
-                if (!this._backgroundColor) {
-                  this._backgroundColor = new THREE.Color();
-                }
-                this._backgroundColor.set(backgroundColor);
-                if (
-                  isBackgroundColorForced &&
-                  threeScene.background &&
-                  threeScene.background !== this._backgroundColor
-                ) {
-                  replacedThreeSceneBackground = threeScene.background;
-                  threeScene.background = this._backgroundColor;
-                }
-                if (!threeScene.background) {
-                  threeScene.background = this._backgroundColor;
+                  isFirstRender = false;
+                } else {
+                  // It's important to set the background to null, as maybe the first rendered
+                  // layer has changed and so the Three.js scene background must be reset.
+                  if (threeScene.background === this._backgroundColor) {
+                    threeScene.background = null;
+                  }
                 }
 
-                isFirstRender = false;
-              } else {
-                // It's important to set the background to null, as maybe the first rendered
-                // layer has changed and so the Three.js scene background must be reset.
-                if (threeScene.background === this._backgroundColor) {
-                  threeScene.background = null;
+                // Clear the depth as each layer is independent and display on top of the previous one,
+                // even 3D objects.
+                threeRenderer.clearDepth();
+                if (runtimeLayerRenderer.hasPostProcessingPass()) {
+                  // Whatever the pass rendering the scene is, it must clear the
+                  // composer buffers with a transparent color, so that the parts
+                  // of the layer where nothing is rendered stay transparent (the
+                  // layers rendered before this one must remain visible).
+                  const clearAlpha = threeRenderer.getClearAlpha();
+                  threeRenderer.setClearAlpha(0);
+                  threeEffectComposer.render();
+                  threeRenderer.setClearAlpha(clearAlpha);
+                } else {
+                  threeRenderer.render(threeScene, threeCamera);
                 }
-              }
+                if (replacedThreeSceneBackground) {
+                  threeScene.background = replacedThreeSceneBackground;
+                }
 
-              // Clear the depth as each layer is independent and display on top of the previous one,
-              // even 3D objects.
-              threeRenderer.clearDepth();
-              if (runtimeLayerRenderer.hasPostProcessingPass()) {
-                // Whatever the pass rendering the scene is, it must clear the
-                // composer buffers with a transparent color, so that the parts
-                // of the layer where nothing is rendered stay transparent (the
-                // layers rendered before this one must remain visible).
-                const clearAlpha = threeRenderer.getClearAlpha();
-                threeRenderer.setClearAlpha(0);
-                threeEffectComposer.render();
-                threeRenderer.setClearAlpha(clearAlpha);
-              } else {
-                threeRenderer.render(threeScene, threeCamera);
-              }
-              if (replacedThreeSceneBackground) {
-                threeScene.background = replacedThreeSceneBackground;
-              }
+                this._layerRenderingMetrics.rendered3DLayersCount++;
 
-              this._layerRenderingMetrics.rendered3DLayersCount++;
-
-              lastRenderWas3D = true;
+                lastRenderWas3D = true;
+              }
             }
           }
         }
@@ -324,6 +378,240 @@ namespace gdjs {
 
       // Uncomment to check the number of 2D&3D rendering done
       // console.log(this._layerRenderingMetrics);
+    }
+
+    /**
+     * Return the cameras of a layer that must be rendered, with the area of
+     * the screen where they are displayed.
+     *
+     * The active camera is always rendered. The other cameras are rendered
+     * when they have an explicit viewport: this is what makes a split-screen.
+     */
+    private _getCamerasToRender(runtimeLayer: gdjs.RuntimeLayer): Array<{
+      cameraIndex: integer;
+      viewport: { x: float; y: float; width: float; height: float };
+    }> {
+      const viewportWidth = this._runtimeScene.getViewportWidth();
+      const viewportHeight = this._runtimeScene.getViewportHeight();
+      const activeCameraIndex = runtimeLayer.getActiveCameraIndex();
+      const cameraCount = runtimeLayer.getCameraCount();
+
+      const camerasToRender: Array<{
+        cameraIndex: integer;
+        viewport: { x: float; y: float; width: float; height: float };
+      }> = [];
+      for (let cameraIndex = 0; cameraIndex < cameraCount; cameraIndex++) {
+        const camera = runtimeLayer.getCameraAtIndex(cameraIndex);
+        const isActiveCamera = cameraIndex === activeCameraIndex;
+        if (!isActiveCamera && camera.useDefaultViewport) continue;
+
+        const left = camera.useDefaultViewport
+          ? 0
+          : Math.min(Math.max(camera.viewportLeft, 0), 1);
+        const top = camera.useDefaultViewport
+          ? 0
+          : Math.min(Math.max(camera.viewportTop, 0), 1);
+        const right = camera.useDefaultViewport
+          ? 1
+          : Math.min(Math.max(camera.viewportRight, 0), 1);
+        const bottom = camera.useDefaultViewport
+          ? 1
+          : Math.min(Math.max(camera.viewportBottom, 0), 1);
+
+        camerasToRender.push({
+          cameraIndex,
+          viewport: {
+            x: left * viewportWidth,
+            y: top * viewportHeight,
+            width: Math.max((right - left) * viewportWidth, 0),
+            height: Math.max((bottom - top) * viewportHeight, 0),
+          },
+        });
+      }
+
+      // A layer always has at least one camera to render.
+      if (camerasToRender.length === 0) {
+        camerasToRender.push({
+          cameraIndex: activeCameraIndex,
+          viewport: {
+            x: 0,
+            y: 0,
+            width: viewportWidth,
+            height: viewportHeight,
+          },
+        });
+      }
+      return camerasToRender;
+    }
+
+    /**
+     * Render a PixiJS container in a part of the screen.
+     *
+     * `pixiRenderer.render` always resets the viewport to the whole canvas,
+     * so the render texture is bound manually with a destination frame.
+     */
+    private _renderPixiContainerInViewport(
+      pixiRenderer: PIXI.Renderer,
+      container: PIXI.DisplayObject,
+      viewport: { x: float; y: float; width: float; height: float }
+    ) {
+      const screen = pixiRenderer.screen;
+      const sourceFrame = new PIXI.Rectangle(0, 0, screen.width, screen.height);
+      const destinationFrame = new PIXI.Rectangle(
+        viewport.x,
+        viewport.y,
+        viewport.width,
+        viewport.height
+      );
+
+      // Same steps as `PIXI.Renderer.render`, but the render texture is bound
+      // with a destination frame instead of being reset to the whole canvas.
+      pixiRenderer.runners.prerender.emit();
+      pixiRenderer.emit('prerender');
+
+      pixiRenderer.renderTexture.bind(undefined, sourceFrame, destinationFrame);
+
+      // The batch renderer can be replaced while rendering (when the first
+      // sprite is encountered), so it must be read again to be flushed.
+      const batch = (pixiRenderer as any).batch;
+      batch.currentRenderer.start();
+      const displayObject: any = container;
+      const cacheParent = displayObject.enableTempParent();
+      displayObject.updateTransform();
+      displayObject.disableTempParent(cacheParent);
+      displayObject.render(pixiRenderer);
+      batch.currentRenderer.flush();
+
+      pixiRenderer.runners.postrender.emit();
+      pixiRenderer.emit('postrender');
+    }
+
+    /**
+     * Render a 3D layer with several cameras, each one in its own viewport.
+     */
+    private _render3DLayerWithMultipleCameras(
+      runtimeLayer: gdjs.RuntimeLayer,
+      runtimeLayerRenderer: gdjs.LayerRenderer,
+      threeRenderer: THREE.WebGLRenderer,
+      pixiRenderer: PIXI.Renderer,
+      threeScene: THREE.Scene,
+      threeEffectComposer: THREE_ADDONS.EffectComposer,
+      camerasToRender: Array<{
+        cameraIndex: integer;
+        viewport: { x: float; y: float; width: float; height: float };
+      }>,
+      activeCameraIndex: integer,
+      backgroundColor: number,
+      isBackgroundColorForced: boolean,
+      shouldClearCanvas: boolean,
+      isFirstRender: boolean,
+      lastRenderWas3D: boolean
+    ) {
+      const canvasWidth = this._runtimeScene.getViewportWidth();
+      const canvasHeight = this._runtimeScene.getViewportHeight();
+      const runtimeLayerRenderingType = runtimeLayer.getRenderingType();
+      const layerHas2DObjectsToRender =
+        runtimeLayerRenderingType ===
+          gdjs.RuntimeLayerRenderingType.TWO_D_PLUS_THREE_D &&
+        runtimeLayerRenderer.has2DObjects();
+
+      // Background of the first rendered layer.
+      let replacedThreeSceneBackground: THREE.Color | THREE.Texture | null =
+        null;
+      if (isFirstRender) {
+        threeRenderer.setClearColor(backgroundColor);
+        threeRenderer.resetState();
+        threeRenderer.setScissorTest(false);
+        threeRenderer.setViewport(0, 0, canvasWidth, canvasHeight);
+        if (shouldClearCanvas) threeRenderer.clear();
+        if (!this._backgroundColor) {
+          this._backgroundColor = new THREE.Color();
+        }
+        this._backgroundColor.set(backgroundColor);
+        if (
+          isBackgroundColorForced &&
+          threeScene.background &&
+          threeScene.background !== this._backgroundColor
+        ) {
+          threeScene.background = this._backgroundColor;
+        }
+        if (!threeScene.background) {
+          threeScene.background = this._backgroundColor;
+        }
+      } else if (threeScene.background === this._backgroundColor) {
+        threeScene.background = null;
+      }
+
+      if (!lastRenderWas3D) {
+        // It's important to reset the internal WebGL state of PixiJS, then
+        // Three.js, to ensure the 3D rendering is made properly by Three.js.
+        pixiRenderer.reset();
+        threeRenderer.resetState();
+      }
+
+      let lastCameraRenderWas3D = true;
+      for (const { cameraIndex, viewport } of camerasToRender) {
+        if (viewport.width <= 0 || viewport.height <= 0) continue;
+
+        if (runtimeLayer.getActiveCameraIndex() !== cameraIndex) {
+          runtimeLayer.setActiveCamera(cameraIndex);
+        } else {
+          runtimeLayerRenderer.updatePosition();
+        }
+
+        if (layerHas2DObjectsToRender) {
+          if (lastCameraRenderWas3D) {
+            threeRenderer.resetState();
+            pixiRenderer.reset();
+          }
+          runtimeLayerRenderer.renderOnPixiRenderTexture(pixiRenderer);
+          runtimeLayerRenderer.updateThreePlaneTextureFromPixiRenderTexture(
+            threeRenderer,
+            pixiRenderer
+          );
+          runtimeLayerRenderer.show2DRenderingPlane(true);
+          pixiRenderer.reset();
+          threeRenderer.resetState();
+          lastCameraRenderWas3D = false;
+        } else if (
+          runtimeLayerRenderingType ===
+          gdjs.RuntimeLayerRenderingType.TWO_D_PLUS_THREE_D
+        ) {
+          runtimeLayerRenderer.show2DRenderingPlane(false);
+        }
+
+        const x = Math.round(viewport.x);
+        const y = Math.round(viewport.y);
+        const width = Math.max(Math.round(viewport.width), 0);
+        const height = Math.max(Math.round(viewport.height), 0);
+        // Three.js uses a bottom-left origin.
+        threeRenderer.setViewport(x, canvasHeight - y - height, width, height);
+        threeRenderer.setScissor(x, canvasHeight - y - height, width, height);
+        threeRenderer.setScissorTest(true);
+
+        const threeCamera = runtimeLayerRenderer.getThreeCamera();
+        if (!threeCamera) continue;
+
+        threeRenderer.clearDepth();
+        if (runtimeLayerRenderer.hasPostProcessingPass()) {
+          const clearAlpha = threeRenderer.getClearAlpha();
+          threeRenderer.setClearAlpha(0);
+          threeEffectComposer.render();
+          threeRenderer.setClearAlpha(clearAlpha);
+        } else {
+          threeRenderer.render(threeScene, threeCamera);
+        }
+        lastCameraRenderWas3D = true;
+      }
+
+      threeRenderer.setScissorTest(false);
+      threeRenderer.setViewport(0, 0, canvasWidth, canvasHeight);
+      if (replacedThreeSceneBackground) {
+        threeScene.background = replacedThreeSceneBackground;
+      }
+      if (runtimeLayer.getActiveCameraIndex() !== activeCameraIndex) {
+        runtimeLayer.setActiveCamera(activeCameraIndex);
+      }
     }
 
     /**

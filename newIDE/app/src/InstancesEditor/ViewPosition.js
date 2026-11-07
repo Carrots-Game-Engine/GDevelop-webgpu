@@ -213,7 +213,6 @@ export default class ViewPosition {
       // will show when the game is played.
       // Keep in sync with the runtime: see `updatePosition` in
       // `GDJS/Runtime/pixi-renderers/layer-pixi-renderer.ts`.
-      threeCamera.fov = camera3DPreview.fieldOfView;
       threeCamera.near = Math.max(camera3DPreview.near, 0.01);
       threeCamera.far = Math.max(camera3DPreview.far, threeCamera.near + 1);
       threeCamera.position.set(
@@ -226,7 +225,29 @@ export default class ViewPosition {
         RenderedInstance.toRad(camera3DPreview.rotationY),
         -RenderedInstance.toRad(camera3DPreview.angle)
       );
-      threeCamera.updateProjectionMatrix();
+
+      if (camera3DPreview.isOrthographic) {
+        // The editor camera is a perspective camera. Use an orthographic
+        // projection matrix so that the preview matches the game, where an
+        // orthographic camera shows an area of the size of the game resolution
+        // divided by the zoom.
+        const halfHeight =
+          camera3DPreview.contentHeight / 2 / camera3DPreview.zoom;
+        const halfWidth = halfHeight * (this._width / this._height);
+        const projectionMatrix = new THREE.Matrix4().makeOrthographic(
+          -halfWidth,
+          halfWidth,
+          halfHeight,
+          -halfHeight,
+          threeCamera.near,
+          threeCamera.far
+        );
+        threeCamera.projectionMatrix.copy(projectionMatrix);
+        threeCamera.projectionMatrixInverse.copy(projectionMatrix).invert();
+      } else {
+        threeCamera.fov = camera3DPreview.fieldOfView;
+        threeCamera.updateProjectionMatrix();
+      }
 
       // The 2D content of the layer is displayed on the plane at Z=0, like in
       // the game, so that the camera sees it where it really is.

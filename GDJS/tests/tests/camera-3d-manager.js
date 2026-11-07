@@ -225,8 +225,8 @@ describe('gdjs.Camera3DManager', () => {
 
     gdjs.scene3d.camera3d.activateCamera3D(runtimeScene, secondCamera, null);
 
-    // The transition starts on the first update following the activation.
-    timeManager.update(100, 1);
+    // The camera is active right away, so conditions using `isActiveCamera`
+    // are true in the same frame.
     manager.update();
     expect(runtimeScene.getLayer('').getCameraX()).to.be(100);
 
@@ -277,5 +277,25 @@ describe('gdjs.Camera3DManager', () => {
     manager.update();
 
     expect(layer.getCameraZoom()).to.be(3);
+  });
+
+  it('reports a camera as active only when it drives the scene', () => {
+    const runtimeScene = makeSceneWith3DLayer();
+    const manager = runtimeScene.getCamera3DManager();
+    const firstCamera = addCamera(runtimeScene, { activeAtStart: true });
+    const secondCamera = addCamera(runtimeScene);
+
+    manager.update();
+    expect(firstCamera.isActiveCamera()).to.be(true);
+    expect(secondCamera.isActiveCamera()).to.be(false);
+
+    secondCamera.activate();
+    expect(secondCamera.isActiveCamera()).to.be(true);
+    expect(firstCamera.isActiveCamera()).to.be(false);
+
+    secondCamera.deactivate();
+    manager.update();
+    expect(secondCamera.isActiveCamera()).to.be(false);
+    expect(manager.getActiveCamera()).to.be(null);
   });
 });
