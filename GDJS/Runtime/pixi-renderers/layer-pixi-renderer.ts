@@ -1106,10 +1106,20 @@ namespace gdjs {
         this._threeCamera.top = height / 2;
         this._threeCamera.bottom = -height / 2;
       }
-      this._threeCamera.near =
-        this._layer.getInitialCamera3DNearPlaneDistance() * inverseWorldScale;
-      this._threeCamera.far =
-        this._layer.getInitialCamera3DFarPlaneDistance() * inverseWorldScale;
+      // The camera planes are in scene units: convert them to the units of
+      // the Three.js scene.
+      const camera = this._layer.getActiveCamera();
+      const nearPlaneDistance = Math.max(
+        // 0 is not a valid value for three js perspective camera:
+        // https://threejs.org/docs/#api/en/cameras/PerspectiveCamera.
+        camera.near * inverseWorldScale,
+        0.000001
+      );
+      this._threeCamera.near = nearPlaneDistance;
+      this._threeCamera.far = Math.max(
+        camera.far * inverseWorldScale,
+        nearPlaneDistance
+      );
 
       this._threeCamera.updateProjectionMatrix();
     }
@@ -1123,20 +1133,27 @@ namespace gdjs {
 
       // Update the 3D camera position and rotation.
       if (this._threeCamera) {
-        const angle = -gdjs.toRad(this._layer.getCameraRotation());
-        this._threeCamera.position.x =
-          this._layer.getCameraX() * inverseWorldScale;
+        const camera = this._layer.getActiveCamera();
+        const angle = -gdjs.toRad(camera.rotation);
+        this._threeCamera.position.x = camera.x * inverseWorldScale;
         // The scene is mirrored on Y
-        this._threeCamera.position.y =
-          -this._layer.getCameraY() * inverseWorldScale;
+        this._threeCamera.position.y = -camera.y * inverseWorldScale;
         this._threeCamera.rotation.z = angle;
+        // The rotations around X and Y are the ones of the active camera.
+        this._threeCamera.rotation.x = gdjs.toRad(camera.rotationX);
+        this._threeCamera.rotation.y = gdjs.toRad(camera.rotationY);
+        this.invalidateRotation();
 
         if (this._threeCamera instanceof THREE.OrthographicCamera) {
-          this._threeCamera.zoom = this._layer.getCameraZoom();
+          this._threeCamera.zoom = camera.zoom;
           this._threeCamera.updateProjectionMatrix();
           this._threeCamera.position.z =
             this._layer.getCameraZ(null) * inverseWorldScale;
         } else {
+          if (this._threeCamera.fov !== camera.fov) {
+            this._threeCamera.fov = camera.fov;
+            this._threeCameraDirty = true;
+          }
           this._threeCamera.position.z =
             this._layer.getCameraZ(this._threeCamera.fov) * inverseWorldScale;
         }
@@ -1316,26 +1333,10 @@ namespace gdjs {
         : 0;
     }
 
-    setCameraRotationY(rotationY: float): void {
-      if (!this._threeCamera) {
-        return;
-      }
-      this._threeCamera.rotation.y = gdjs.toRad(rotationY);
-      this.invalidateRotation();
-    }
-
     getCameraRotationX(): number {
       return this._threeCamera
         ? gdjs.toDegrees(this._threeCamera.rotation.x)
         : 0;
-    }
-
-    setCameraRotationX(rotationX: float): void {
-      if (!this._threeCamera) {
-        return;
-      }
-      this._threeCamera.rotation.x = gdjs.toRad(rotationX);
-      this.invalidateRotation();
     }
 
     invalidateRotation(): void {

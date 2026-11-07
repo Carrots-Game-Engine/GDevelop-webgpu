@@ -15,7 +15,9 @@ import { type HistoryHandler } from '../VariablesList/VariablesList';
 import { type InstancesEditorShortcutsCallbacks } from '../InstancesEditor';
 import { type EditorId } from './utils';
 import Rectangle from '../Utils/Rectangle';
-import ViewPosition from '../InstancesEditor/ViewPosition';
+import ViewPosition, {
+  type Camera3DPreview,
+} from '../InstancesEditor/ViewPosition';
 import { type ObjectFolderOrObjectWithContext } from '../ObjectsList/EnumerateObjectFolderOrObject';
 import { ProjectScopedContainersAccessor } from '../InstructionOrExpression/EventsScope';
 import { type TileMapTileSelection } from '../InstancesEditor/TileSetVisualizer';
@@ -157,6 +159,8 @@ export type SceneEditorsDisplayProps = {|
   instancesEditorSettings: InstancesEditorSettings,
   onInstancesEditorSettingsMutated: InstancesEditorSettings => void,
   editorViewPosition2D: EditorViewPosition2D,
+  /** The 3D camera the scene editor is seen through, if any. */
+  camera3DPreview?: Camera3DPreview | null,
 
   historyHandler: HistoryHandler,
   unsavedChanges?: ?UnsavedChanges,

@@ -1214,9 +1214,11 @@ void ExporterHelper::AddLibsInclude(bool pixiRenderers,
   InsertUnique(includesFiles, "profiler.js");
   InsertUnique(includesFiles, "RuntimeInstanceContainer.js");
   InsertUnique(includesFiles, "runtimescene.js");
+  InsertUnique(includesFiles, "Camera3DManager.js");
   InsertUnique(includesFiles, "scenestack.js");
   InsertUnique(includesFiles, "force.js");
   InsertUnique(includesFiles, "RuntimeLayer.js");
+  InsertUnique(includesFiles, "LayerCamera.js");
   InsertUnique(includesFiles, "layer.js");
   InsertUnique(includesFiles, "RuntimeCustomObjectLayer.js");
   InsertUnique(includesFiles, "timer.js");

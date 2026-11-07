@@ -5,7 +5,7 @@ import panable, { type PanMoveEvent } from '../Utils/PixiSimpleGesture/pan';
 import KeyboardShortcuts, { MID_MOUSE_BUTTON } from '../UI/KeyboardShortcuts';
 import isUserTyping from '../KeyboardShortcuts/IsUserTyping';
 import InstancesRenderer from './InstancesRenderer';
-import ViewPosition from './ViewPosition';
+import ViewPosition, { type Camera3DPreview } from './ViewPosition';
 import SelectedInstances from './SelectedInstances';
 import HighlightedInstance from './HighlightedInstance';
 import HiddenInstancesDecorations from './HiddenInstancesDecorations';
@@ -129,6 +129,8 @@ export type InstancesEditorPropsWithoutSizeAndScroll = {|
     ignoreSelectedObjectNamesForContextMenu?: boolean
   ) => void,
   pauseRendering: boolean,
+  /** The 3D camera the scene is seen through, if any. */
+  camera3DPreview?: Camera3DPreview | null,
   instancesEditorShortcutsCallbacks: InstancesEditorShortcutsCallbacks,
   tileMapTileSelection: ?TileMapTileSelection,
   onSelectTileMapTile: (?TileMapTileSelection) => void,
@@ -1401,7 +1403,11 @@ export default class InstancesEditor extends Component<Props, State> {
     this.props.onInstancesSelected(instancesSelected);
   };
 
+  _isCamera3DPreviewEnabled = (): boolean =>
+    this.viewPosition.isCamera3DPreviewEnabled();
+
   _onInstanceClicked = (instance: gdInitialInstance) => {
+    if (this._isCamera3DPreviewEnabled()) return;
     this.fpsLimiter.notifyInteractionHappened();
     this.pixiRenderer.view.focus();
   };
@@ -1439,6 +1445,7 @@ export default class InstancesEditor extends Component<Props, State> {
   };
 
   _onInstanceDoubleClicked = (instance: gdInitialInstance) => {
+    if (this._isCamera3DPreviewEnabled()) return;
     if (!this.keyboardShortcuts.shouldIgnoreDoubleClick()) {
       this.props.onInstanceDoubleClicked(instance);
     }
@@ -1454,6 +1461,7 @@ export default class InstancesEditor extends Component<Props, State> {
     sceneX: number,
     sceneY: number
   ) => {
+    if (this._isCamera3DPreviewEnabled()) return;
     this.fpsLimiter.notifyInteractionHappened();
 
     this.hasCursorMovedSinceItIsDown = false;
@@ -1506,6 +1514,7 @@ export default class InstancesEditor extends Component<Props, State> {
     sceneX: number,
     sceneY: number
   ) => {
+    if (this._isCamera3DPreviewEnabled()) return;
     // Select instances on a click.
     // - In case of standard selection, it's already done in _onDownInstance
     // but selecting the same instance twice has no side effect on the
@@ -1540,6 +1549,7 @@ export default class InstancesEditor extends Component<Props, State> {
     deltaX: number,
     deltaY: number
   ) => {
+    if (this._isCamera3DPreviewEnabled()) return;
     this.fpsLimiter.notifyInteractionHappened();
 
     const isMovingForTheFirstTimeSinceItIsDown = !this
@@ -1908,6 +1918,12 @@ export default class InstancesEditor extends Component<Props, State> {
           display: this.props.showBasicProfilingCounters,
         });
         this.background.render();
+
+        // Set the camera preview on each frame so that changes made to the
+        // camera (position, field of view...) are displayed right away.
+        this.viewPosition.setCamera3DPreview(
+          this.props.camera3DPreview || null
+        );
 
         this.instancesRenderer.render(
           this.pixiRenderer,

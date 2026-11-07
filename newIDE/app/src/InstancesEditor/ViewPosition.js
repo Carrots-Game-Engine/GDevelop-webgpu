@@ -5,6 +5,27 @@ import Rectangle from '../Utils/Rectangle';
 import { type InstancesEditorSettings } from './InstancesEditorSettings';
 import RenderedInstance from '../ObjectsRendering/Renderers/RenderedInstance';
 
+/**
+ * The state of a 3D camera of the scene, as used to render the scene editor
+ * from the point of view of this camera.
+ */
+export type Camera3DPreview = {|
+  x: number,
+  y: number,
+  z: number,
+  rotationX: number,
+  rotationY: number,
+  angle: number,
+  fieldOfView: number,
+  near: number,
+  far: number,
+  isOrthographic: boolean,
+  zoom: number,
+  /** The size of the area displaying the 2D content of the layers. */
+  contentWidth: number,
+  contentHeight: number,
+|};
+
 type Props = {|
   initialViewX: number,
   initialViewY: number,
@@ -19,6 +40,7 @@ export default class ViewPosition {
   _width: number;
   _height: number;
   instancesEditorSettings: InstancesEditorSettings;
+  _camera3DPreview: Camera3DPreview | null = null;
   // $FlowFixMe[missing-local-annot]
   _pixiContainer = (new PIXI.Container(): any);
 
@@ -37,6 +59,20 @@ export default class ViewPosition {
 
   setInstancesEditorSettings(instancesEditorSettings: InstancesEditorSettings) {
     this.instancesEditorSettings = instancesEditorSettings;
+  }
+
+  /**
+   * Set the 3D camera through which the scene is displayed, or `null` to come
+   * back to the normal edition view.
+   *
+   * This only changes the rendering: the camera of the game is not modified.
+   */
+  setCamera3DPreview(camera3DPreview: Camera3DPreview | null) {
+    this._camera3DPreview = camera3DPreview;
+  }
+
+  isCamera3DPreviewEnabled(): boolean {
+    return !!this._camera3DPreview;
   }
 
   resize(width: number, height: number) {
@@ -170,6 +206,37 @@ export default class ViewPosition {
     threePlaneMesh: THREE.Mesh
   ) {
     threeCamera.aspect = this._width / this._height;
+
+    const camera3DPreview = this._camera3DPreview;
+    if (camera3DPreview) {
+      // Display the scene as seen by the 3D camera, to check what the camera
+      // will show when the game is played.
+      // Keep in sync with the runtime: see `updatePosition` in
+      // `GDJS/Runtime/pixi-renderers/layer-pixi-renderer.ts`.
+      threeCamera.fov = camera3DPreview.fieldOfView;
+      threeCamera.near = Math.max(camera3DPreview.near, 0.01);
+      threeCamera.far = Math.max(camera3DPreview.far, threeCamera.near + 1);
+      threeCamera.position.set(
+        camera3DPreview.x,
+        -camera3DPreview.y, // Inverted because the scene is mirrored on Y axis.
+        camera3DPreview.z
+      );
+      threeCamera.rotation.set(
+        RenderedInstance.toRad(camera3DPreview.rotationX),
+        RenderedInstance.toRad(camera3DPreview.rotationY),
+        -RenderedInstance.toRad(camera3DPreview.angle)
+      );
+      threeCamera.updateProjectionMatrix();
+
+      // The 2D content of the layer is displayed on the plane at Z=0, like in
+      // the game, so that the camera sees it where it really is.
+      threePlaneMesh.visible = true;
+      threePlaneMesh.scale.x = camera3DPreview.contentWidth;
+      threePlaneMesh.scale.y = camera3DPreview.contentHeight;
+      threePlaneMesh.position.set(camera3DPreview.x, -camera3DPreview.y, 0);
+      threePlaneMesh.rotation.z = 0;
+      return;
+    }
 
     const zoomFactor = this.instancesEditorSettings.zoomFactor;
 

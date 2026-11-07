@@ -12,6 +12,8 @@ namespace gdjs {
   export class RuntimeCustomObjectLayer extends gdjs.RuntimeLayer {
     private _cameraDeltaX: float = 0;
     private _cameraDeltaY: float = 0;
+    /** A custom object layer has a single, read-only, camera state. */
+    private _camera: gdjs.LayerCamera = new gdjs.LayerCamera();
 
     /**
      * @param layerData The data used to initialize the layer
@@ -32,6 +34,36 @@ namespace gdjs {
     override onGameResolutionResized(
       oldGameResolutionOriginX: float,
       oldGameResolutionOriginY: float
+    ): void {}
+
+    /**
+     * A custom object layer has a single camera, which can't be changed.
+     */
+    override getActiveCamera(): gdjs.LayerCamera {
+      return this._camera;
+    }
+
+    override getCameraCount(): integer {
+      return 1;
+    }
+
+    override getActiveCameraIndex(): integer {
+      return 0;
+    }
+
+    override getCamera(cameraId?: integer): gdjs.LayerCamera {
+      return this._camera;
+    }
+
+    override addCamera(): integer {
+      return 0;
+    }
+
+    override setActiveCamera(cameraId: integer): void {}
+
+    override applyCameraState(
+      state: gdjs.LayerCamera,
+      cameraId?: integer
     ): void {}
 
     override getCameraX(cameraId?: integer): float {

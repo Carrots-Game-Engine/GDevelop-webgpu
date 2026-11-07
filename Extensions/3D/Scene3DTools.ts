@@ -276,5 +276,48 @@ namespace gdjs {
         layer.setCamera3DFieldOfView(angle);
       };
     }
+
+    /**
+     * Functions related to the 3D camera objects (`Camera3DObject`).
+     *
+     * A 3D camera object drives the camera of its layer while it's active.
+     * Only one camera is active at a time: the one with the highest priority
+     * among the active ones.
+     */
+    export namespace camera3d {
+      /**
+       * Make a 3D camera the active one, without waiting for the priority
+       * rules: the other cameras are deactivated.
+       */
+      export const activateCamera3D = (
+        runtimeScene: RuntimeScene,
+        camera: gdjs.Camera3DRuntimeObject | null,
+        blendDuration: float | null
+      ) => {
+        if (!camera) return;
+        runtimeScene
+          .getCamera3DManager()
+          .activateCamera(
+            camera,
+            blendDuration === null ? undefined : blendDuration
+          );
+      };
+
+      export const deactivateCamera3D = (
+        runtimeScene: RuntimeScene,
+        camera: gdjs.Camera3DRuntimeObject | null
+      ) => {
+        if (!camera) return;
+        camera.setCamera3DActive(false);
+      };
+
+      export const isCamera3DActive = (
+        runtimeScene: RuntimeScene,
+        camera: gdjs.Camera3DRuntimeObject | null
+      ): boolean => {
+        if (!camera) return false;
+        return runtimeScene.getCamera3DManager().getActiveCamera() === camera;
+      };
+    }
   }
 }

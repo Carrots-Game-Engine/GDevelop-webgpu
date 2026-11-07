@@ -313,9 +313,58 @@ namespace gdjs {
     }
 
     /**
+     * Get the state of the active camera, which is the one rendered.
+     */
+    abstract getActiveCamera(): gdjs.LayerCamera;
+
+    /**
+     * Get the number of cameras of the layer (which is at least 1).
+     */
+    abstract getCameraCount(): integer;
+
+    /**
+     * Get the ID of the active camera, which is the camera rendered.
+     */
+    abstract getActiveCameraIndex(): integer;
+
+    /**
+     * Get the state of a camera of the layer.
+     *
+     * @param cameraId The camera number. 0 (or nothing) designates the active
+     * camera, which is the one used for rendering.
+     */
+    abstract getCamera(cameraId?: integer): gdjs.LayerCamera;
+
+    /**
+     * Add a camera to the layer, starting from the state of the active camera.
+     *
+     * @returns The ID of the new camera.
+     */
+    abstract addCamera(): integer;
+
+    /**
+     * Change the camera used for rendering the layer.
+     *
+     * @param cameraId The number of the camera to render.
+     */
+    abstract setActiveCamera(cameraId: integer): void;
+
+    /**
+     * Copy a camera state into one of the cameras of the layer.
+     *
+     * @param state The state to copy.
+     * @param cameraId The camera to update (the active one by default).
+     */
+    abstract applyCameraState(
+      state: gdjs.LayerCamera,
+      cameraId?: integer
+    ): void;
+
+    /**
      * Change the camera center X position.
      *
-     * @param cameraId The camera number. Currently ignored.
+     * @param cameraId The camera number. 0 (or nothing) designates the active
+     * camera.
      * @return The x position of the camera
      */
     abstract getCameraX(cameraId?: integer): float;

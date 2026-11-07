@@ -2184,6 +2184,392 @@ module.exports = {
       targetChoices: ['all', 'front', 'back', 'left', 'right', 'top', 'bottom'],
     });
 
+    // 3D camera object:
+    const Camera3DObject = new gd.ObjectJsImplementation();
+    Camera3DObject.content = {
+      // The object is not drawn: its size is only used as a marker in the
+      // editor.
+      width: 50,
+      height: 50,
+      depth: 50,
+      fieldOfView: 45,
+      nearPlaneDistance: 0.1,
+      farPlaneDistance: 2000,
+      projection: 'perspective',
+      zoom: 1,
+      activeAtStart: false,
+      priority: 0,
+      blendDuration: 0,
+    };
+    Camera3DObject.updateProperty = function (propertyName, newValue) {
+      const objectContent = this.content;
+      if (
+        propertyName === 'width' ||
+        propertyName === 'height' ||
+        propertyName === 'depth'
+      ) {
+        const value = parseFloat(newValue);
+        objectContent[propertyName] = isNaN(value) ? 1 : Math.max(value, 1);
+        return true;
+      }
+      if (propertyName === 'fieldOfView') {
+        const value = parseFloat(newValue);
+        if (isNaN(value)) return false;
+        objectContent.fieldOfView = Math.min(Math.max(value, 1), 179);
+        return true;
+      }
+      if (
+        propertyName === 'nearPlaneDistance' ||
+        propertyName === 'farPlaneDistance'
+      ) {
+        const value = parseFloat(newValue);
+        if (isNaN(value) || value < 0) return false;
+        objectContent[propertyName] = value;
+        return true;
+      }
+      if (propertyName === 'zoom') {
+        const value = parseFloat(newValue);
+        if (isNaN(value) || value <= 0) return false;
+        objectContent.zoom = value;
+        return true;
+      }
+      if (propertyName === 'priority') {
+        const value = parseFloat(newValue);
+        if (isNaN(value)) return false;
+        objectContent.priority = value;
+        return true;
+      }
+      if (propertyName === 'blendDuration') {
+        const value = parseFloat(newValue);
+        if (isNaN(value) || value < 0) return false;
+        objectContent.blendDuration = value;
+        return true;
+      }
+      if (propertyName === 'projection') {
+        const normalizedValue = '' + newValue;
+        const value = normalizedValue.toLowerCase();
+        if (value !== 'perspective' && value !== 'orthographic') return false;
+        objectContent.projection = value;
+        return true;
+      }
+      if (propertyName === 'activeAtStart') {
+        objectContent.activeAtStart = newValue === '1' || newValue === 'true';
+        return true;
+      }
+      return false;
+    };
+    Camera3DObject.getProperties = function () {
+      const objectProperties = new gd.MapStringPropertyDescriptor();
+      const objectContent = this.content;
+
+      objectProperties
+        .getOrCreate('projection')
+        .setValue(objectContent.projection || 'perspective')
+        .setType('choice')
+        .addChoice('perspective', _('Perspective'))
+        .addChoice('orthographic', _('Orthographic'))
+        .setLabel(_('Projection'))
+        .setDescription(
+          _(
+            'Use a perspective camera for a realistic view, or an orthographic one for an isometric-like view.'
+          )
+        )
+        .setGroup(_('Lens'));
+
+      objectProperties
+        .getOrCreate('fieldOfView')
+        .setValue((objectContent.fieldOfView || 45).toString())
+        .setType('number')
+        .setLabel(_('Field of view (in degrees)'))
+        .setDescription(
+          _('The field of view of a perspective camera, in degrees.')
+        )
+        .setGroup(_('Lens'));
+
+      objectProperties
+        .getOrCreate('zoom')
+        .setValue((objectContent.zoom || 1).toString())
+        .setType('number')
+        .setLabel(_('Zoom'))
+        .setDescription(
+          _('The zoom of an orthographic camera. 1 is the default zoom.')
+        )
+        .setGroup(_('Lens'));
+
+      objectProperties
+        .getOrCreate('nearPlaneDistance')
+        .setValue((objectContent.nearPlaneDistance || 0.1).toString())
+        .setType('number')
+        .setLabel(_('Near plane distance'))
+        .setDescription(_('Objects closer than this distance are not drawn.'))
+        .setGroup(_('Lens'));
+
+      objectProperties
+        .getOrCreate('farPlaneDistance')
+        .setValue((objectContent.farPlaneDistance || 2000).toString())
+        .setType('number')
+        .setLabel(_('Far plane distance'))
+        .setDescription(_('Objects further than this distance are not drawn.'))
+        .setGroup(_('Lens'));
+
+      objectProperties
+        .getOrCreate('activeAtStart')
+        .setValue(objectContent.activeAtStart ? 'true' : 'false')
+        .setType('boolean')
+        .setLabel(_('Active at the beginning of the scene'))
+        .setDescription(
+          _(
+            'If several cameras are active, the one with the highest priority is used.'
+          )
+        )
+        .setGroup(_('Activation'));
+
+      objectProperties
+        .getOrCreate('priority')
+        .setValue((objectContent.priority || 0).toString())
+        .setType('number')
+        .setLabel(_('Priority'))
+        .setDescription(
+          _(
+            'The camera with the highest priority among the active ones is used.'
+          )
+        )
+        .setGroup(_('Activation'));
+
+      objectProperties
+        .getOrCreate('blendDuration')
+        .setValue((objectContent.blendDuration || 0).toString())
+        .setType('number')
+        .setLabel(_('Transition duration (in seconds)'))
+        .setDescription(
+          _(
+            'The duration of the transition from the previous camera when this camera becomes active. 0 means an immediate switch.'
+          )
+        )
+        .setGroup(_('Activation'));
+
+      return objectProperties;
+    };
+    Camera3DObject.updateInitialInstanceProperty = function (
+      instance,
+      propertyName,
+      newValue
+    ) {
+      return false;
+    };
+    Camera3DObject.getInitialInstanceProperties = function (instance) {
+      const instanceProperties = new gd.MapStringPropertyDescriptor();
+      return instanceProperties;
+    };
+
+    const camera3DObject = extension
+      .addObject(
+        'Camera3DObject',
+        _('3D Camera'),
+        _(
+          'A camera driving the camera of its layer. Only one camera is active at a time, so scenes can switch from one point of view to another without moving the camera with events.'
+        ),
+        'JsPlatform/Extensions/3d_camera.svg',
+        Camera3DObject
+      )
+      .setCategory('General')
+      .addPropertyGroup(_('Lens'))
+      .addPropertyGroup(_('Activation'))
+      .addDefaultBehavior('Scene3D::Base3DBehavior')
+      .markAsRenderedIn3D()
+      .setIncludeFile('Extensions/3D/A_RuntimeObject3D.js')
+      .addIncludeFile('Extensions/3D/A_RuntimeObject3DRenderer.js')
+      .addIncludeFile('Extensions/3D/Camera3DRuntimeObject.js')
+      .addIncludeFile('Extensions/3D/Camera3DRuntimeObjectPixiRenderer.js');
+
+    camera3DObject
+      .addExpressionAndConditionAndAction(
+        'number',
+        'FieldOfView',
+        _('Field of view'),
+        _('the field of view, in degrees'),
+        _('the field of view of _PARAM0_'),
+        _('Lens'),
+        'res/conditions/camera.svg'
+      )
+      .addParameter('object', _('3D camera'), 'Camera3DObject', false)
+      .useStandardParameters(
+        'number',
+        gd.ParameterOptions.makeNewOptions().setDescription(
+          _('Field of view, in degrees')
+        )
+      )
+      .setFunctionName('setCamera3DFieldOfView')
+      .setGetter('getCamera3DFieldOfView');
+
+    camera3DObject
+      .addExpressionAndConditionAndAction(
+        'number',
+        'NearPlaneDistance',
+        _('Near plane distance'),
+        _('the near plane distance'),
+        _('the near plane distance of _PARAM0_'),
+        _('Lens'),
+        'res/conditions/camera.svg'
+      )
+      .addParameter('object', _('3D camera'), 'Camera3DObject', false)
+      .useStandardParameters('number', gd.ParameterOptions.makeNewOptions())
+      .setFunctionName('setCamera3DNearPlaneDistance')
+      .setGetter('getCamera3DNearPlaneDistance');
+
+    camera3DObject
+      .addExpressionAndConditionAndAction(
+        'number',
+        'FarPlaneDistance',
+        _('Far plane distance'),
+        _('the far plane distance'),
+        _('the far plane distance of _PARAM0_'),
+        _('Lens'),
+        'res/conditions/camera.svg'
+      )
+      .addParameter('object', _('3D camera'), 'Camera3DObject', false)
+      .useStandardParameters('number', gd.ParameterOptions.makeNewOptions())
+      .setFunctionName('setCamera3DFarPlaneDistance')
+      .setGetter('getCamera3DFarPlaneDistance');
+
+    camera3DObject
+      .addExpressionAndConditionAndAction(
+        'number',
+        'Zoom',
+        _('Zoom'),
+        _('the zoom (for an orthographic camera)'),
+        _('the zoom of _PARAM0_'),
+        _('Lens'),
+        'res/conditions/camera.svg'
+      )
+      .addParameter('object', _('3D camera'), 'Camera3DObject', false)
+      .useStandardParameters('number', gd.ParameterOptions.makeNewOptions())
+      .setFunctionName('setCamera3DZoom')
+      .setGetter('getCamera3DZoom');
+
+    camera3DObject
+      .addExpressionAndConditionAndAction(
+        'number',
+        'Priority',
+        _('Priority'),
+        _('the priority'),
+        _('the priority of _PARAM0_'),
+        _('Activation'),
+        'res/conditions/camera.svg'
+      )
+      .addParameter('object', _('3D camera'), 'Camera3DObject', false)
+      .useStandardParameters('number', gd.ParameterOptions.makeNewOptions())
+      .setFunctionName('setCamera3DPriority')
+      .setGetter('getCamera3DPriority');
+
+    camera3DObject
+      .addExpressionAndConditionAndAction(
+        'number',
+        'BlendDuration',
+        _('Transition duration'),
+        _('the transition duration, in seconds'),
+        _('the transition duration of _PARAM0_'),
+        _('Activation'),
+        'res/conditions/camera.svg'
+      )
+      .addParameter('object', _('3D camera'), 'Camera3DObject', false)
+      .useStandardParameters(
+        'number',
+        gd.ParameterOptions.makeNewOptions().setDescription(
+          _('Transition duration, in seconds')
+        )
+      )
+      .setFunctionName('setCamera3DBlendDuration')
+      .setGetter('getCamera3DBlendDuration');
+
+    camera3DObject
+      .addScopedCondition(
+        'IsActive',
+        _('Is the active camera'),
+        _(
+          'Check if the camera is the one currently used to look at the scene.'
+        ),
+        _('_PARAM0_ is the active 3D camera'),
+        _('Activation'),
+        'res/conditions/camera24.png',
+        'res/conditions/camera.png'
+      )
+      .addParameter('object', _('3D camera'), 'Camera3DObject', false)
+      .setFunctionName('isActiveCamera');
+
+    camera3DObject
+      .addScopedAction(
+        'Activate',
+        _('Activate the camera'),
+        _(
+          'Use this camera to look at the scene. The other cameras are deactivated.'
+        ),
+        _('Activate the 3D camera _PARAM0_'),
+        _('Activation'),
+        'res/actions/camera24.png',
+        'res/actions/camera.png'
+      )
+      .addParameter('object', _('3D camera'), 'Camera3DObject', false)
+      .setFunctionName('activate');
+
+    camera3DObject
+      .addScopedAction(
+        'Deactivate',
+        _('Deactivate the camera'),
+        _(
+          'Stop using this camera to look at the scene. The camera of the layer keeps its last position.'
+        ),
+        _('Deactivate the 3D camera _PARAM0_'),
+        _('Activation'),
+        'res/actions/camera24.png',
+        'res/actions/camera.png'
+      )
+      .addParameter('object', _('3D camera'), 'Camera3DObject', false)
+      .setFunctionName('deactivate');
+
+    extension
+      .addAction(
+        'ActivateCamera3D',
+        _('Activate a 3D camera'),
+        _(
+          'Use a 3D camera to look at the scene, until another camera is activated.'
+        ),
+        _('Activate the 3D camera _PARAM1_ (transition: _PARAM2_ seconds)'),
+        _('3D'),
+        'res/actions/camera24.png',
+        'res/actions/camera.png'
+      )
+      .addCodeOnlyParameter('currentScene', '')
+      .addParameter('object', _('3D camera'), 'Camera3DObject', false)
+      .addParameter(
+        'expression',
+        _('Transition duration (in seconds)'),
+        '',
+        true
+      )
+      .setDefaultValue('0')
+      .setFunctionName('gdjs.scene3d.camera3d.activateCamera3D')
+      .setIncludeFile('Extensions/3D/Scene3DTools.js')
+      .addIncludeFile('Extensions/3D/Camera3DRuntimeObject.js');
+
+    extension
+      .addCondition(
+        'IsCamera3DActive',
+        _('Is a 3D camera the active one'),
+        _(
+          'Check if a 3D camera is the one currently used to look at the scene.'
+        ),
+        _('The 3D camera _PARAM1_ is the active one'),
+        _('3D'),
+        'res/conditions/camera24.png',
+        'res/conditions/camera.png'
+      )
+      .addCodeOnlyParameter('currentScene', '')
+      .addParameter('object', _('3D camera'), 'Camera3DObject', false)
+      .setFunctionName('gdjs.scene3d.camera3d.isCamera3DActive')
+      .setIncludeFile('Extensions/3D/Scene3DTools.js')
+      .addIncludeFile('Extensions/3D/Camera3DRuntimeObject.js');
+
     extension
       .addExpressionAndConditionAndAction(
         'number',
@@ -5936,6 +6322,384 @@ module.exports = {
     objectsRenderingService.registerInstance3DRenderer(
       'Scene3D::Model3DObject',
       Model3DRendered3DInstance
+    );
+
+    /**
+     * The gizmo of the 3D camera is drawn by a wireframe frustum, so that the
+     * camera can be placed and oriented like any other object of the scene.
+     */
+    const CAMERA_3D_ACTIVE_COLOR = 0x27aae1;
+    const CAMERA_3D_INACTIVE_COLOR = 0x8c9295;
+    /**
+     * The frustum is drawn with a limited length, otherwise a camera with a far
+     * plane at 2000 units would fill the whole scene editor.
+     */
+    const CAMERA_3D_MAX_FRUSTUM_LENGTH = 300;
+    const CAMERA_3D_ICON_SIZE = 32;
+
+    /**
+     * Read the lens and activation settings of the 3D camera object.
+     * Values are stored as-is in the content of the JsImplementation object, so
+     * they are normalized here to always get usable numbers.
+     */
+    const getCamera3DSettings = (objectConfiguration) => {
+      const object = gd.castObject(
+        objectConfiguration,
+        gd.ObjectJsImplementation
+      );
+      const content = object.content || {};
+      const readNumber = (value, defaultValue) => {
+        const number = parseFloat(value);
+        return isNaN(number) ? defaultValue : number;
+      };
+      return {
+        fieldOfView: Math.min(
+          Math.max(readNumber(content.fieldOfView, 45), 1),
+          179
+        ),
+        near: Math.max(readNumber(content.nearPlaneDistance, 0.1), 0.001),
+        far: Math.max(readNumber(content.farPlaneDistance, 2000), 0.002),
+        isOrthographic: content.projection === 'orthographic',
+        zoom: Math.max(readNumber(content.zoom, 1), 0.001),
+        isActiveAtStart:
+          content.activeAtStart === true ||
+          content.activeAtStart === 'true' ||
+          content.activeAtStart === '1',
+      };
+    };
+
+    /**
+     * Draw the icon of a 3D camera in a PixiJS graphics.
+     */
+    const drawCamera3DIcon = (graphics, color, scale) => {
+      graphics.clear();
+      graphics.lineStyle(2 * scale, color, 1, 0.5, true);
+      graphics.beginFill(color, 0.15);
+      graphics.drawRoundedRect(
+        -15 * scale,
+        -10 * scale,
+        24 * scale,
+        20 * scale,
+        3 * scale
+      );
+      graphics.endFill();
+      // The lens.
+      graphics.beginFill(color, 0.45);
+      graphics.drawCircle(0, 0, 6 * scale);
+      graphics.endFill();
+      // The viewfinder, on the side of the camera.
+      graphics.beginFill(color, 0.8);
+      graphics.drawRect(11 * scale, -6 * scale, 6 * scale, 12 * scale);
+      graphics.endFill();
+    };
+
+    class RenderedCamera3DObject2DInstance extends RenderedInstance {
+      /** @type {number} */
+      _defaultWidth = CAMERA_3D_ICON_SIZE;
+      /** @type {number} */
+      _defaultHeight = CAMERA_3D_ICON_SIZE;
+      /** @type {number} */
+      _defaultDepth = CAMERA_3D_ICON_SIZE;
+
+      constructor(
+        project,
+        instance,
+        associatedObjectConfiguration,
+        pixiContainer,
+        pixiResourcesLoader
+      ) {
+        super(
+          project,
+          instance,
+          associatedObjectConfiguration,
+          pixiContainer,
+          pixiResourcesLoader
+        );
+
+        this._pixiObject = new PIXI.Graphics();
+        this._pixiContainer.addChild(this._pixiObject);
+        this.update();
+      }
+
+      onRemovedFromScene() {
+        super.onRemovedFromScene();
+        this._pixiObject.destroy();
+      }
+
+      static getThumbnail(project, resourcesLoader, objectConfiguration) {
+        return 'JsPlatform/Extensions/3d_camera.svg';
+      }
+
+      update() {
+        const settings = getCamera3DSettings(
+          this._associatedObjectConfiguration
+        );
+        drawCamera3DIcon(
+          this._pixiObject,
+          settings.isActiveAtStart
+            ? CAMERA_3D_ACTIVE_COLOR
+            : CAMERA_3D_INACTIVE_COLOR,
+          1
+        );
+        this._pixiObject.position.x = this._instance.getX();
+        this._pixiObject.position.y = this._instance.getY();
+        this._pixiObject.angle = this._instance.getAngle();
+      }
+
+      getDefaultWidth() {
+        return this._defaultWidth;
+      }
+
+      getDefaultHeight() {
+        return this._defaultHeight;
+      }
+
+      getDefaultDepth() {
+        return this._defaultDepth;
+      }
+    }
+
+    /**
+     * Show a 3D camera in the scene editor: the camera body and its frustum, so
+     * that the camera can be moved and oriented in the 3D world.
+     *
+     * The active camera (the one driving the scene at the beginning) is drawn
+     * with the color of the editor, the other ones are drawn in gray.
+     */
+    class RenderedCamera3DObject3DInstance extends Rendered3DInstance {
+      /** @type {number} */
+      _defaultWidth = CAMERA_3D_ICON_SIZE;
+      /** @type {number} */
+      _defaultHeight = CAMERA_3D_ICON_SIZE;
+      /** @type {number} */
+      _defaultDepth = CAMERA_3D_ICON_SIZE;
+
+      constructor(
+        project,
+        instance,
+        associatedObjectConfiguration,
+        pixiContainer,
+        threeGroup,
+        pixiResourcesLoader
+      ) {
+        super(
+          project,
+          instance,
+          associatedObjectConfiguration,
+          pixiContainer,
+          threeGroup,
+          pixiResourcesLoader
+        );
+
+        this._pixiObject = new PIXI.Graphics();
+        this._pixiContainer.addChild(this._pixiObject);
+
+        this._threeObject = new THREE.Group();
+        this._threeObject.rotation.order = 'ZYX';
+        // The camera is added to the root of the scene and not to the group
+        // mirroring the Y axis: the gizmo must be placed exactly where the
+        // camera is when the scene is played (the scene is mirrored on Y, and
+        // the camera is not a child of this mirroring).
+        const threeRoot = this._threeGroup.parent || this._threeGroup;
+        threeRoot.add(this._threeObject);
+
+        this._bodyMaterial = new THREE.MeshBasicMaterial({
+          color: CAMERA_3D_INACTIVE_COLOR,
+          transparent: true,
+          opacity: 0.9,
+        });
+        this._frustumMaterial = new THREE.LineBasicMaterial({
+          color: CAMERA_3D_INACTIVE_COLOR,
+          transparent: true,
+          opacity: 0.85,
+        });
+
+        // The body of the camera.
+        this._bodyGeometry = new THREE.BoxGeometry(16, 12, 20);
+        this._body = new THREE.Mesh(this._bodyGeometry, this._bodyMaterial);
+        this._threeObject.add(this._body);
+
+        // The lens, pointing toward the direction the camera looks at (-Z).
+        this._lensGeometry = new THREE.CylinderGeometry(5, 6, 8, 16);
+        this._lensGeometry.rotateX(Math.PI / 2);
+        this._lens = new THREE.Mesh(this._lensGeometry, this._bodyMaterial);
+        this._lens.position.z = -13;
+        this._threeObject.add(this._lens);
+
+        // The frustum: 4 edges for the near plane, 4 for the far plane and 4
+        // edges joining them.
+        this._frustumPositions = new Float32Array(12 * 2 * 3);
+        this._frustumGeometry = new THREE.BufferGeometry();
+        this._frustumGeometry.setAttribute(
+          'position',
+          new THREE.BufferAttribute(this._frustumPositions, 3)
+        );
+        this._frustum = new THREE.LineSegments(
+          this._frustumGeometry,
+          this._frustumMaterial
+        );
+        this._frustum.frustumCulled = false;
+        this._threeObject.add(this._frustum);
+
+        this._frustumSignature = '';
+        this.update();
+      }
+
+      onRemovedFromScene() {
+        const threeParent = this._threeObject ? this._threeObject.parent : null;
+        super.onRemovedFromScene();
+        // The gizmo is not a child of the group used by the base class.
+        if (threeParent) threeParent.remove(this._threeObject);
+
+        this._bodyGeometry.dispose();
+        this._lensGeometry.dispose();
+        this._frustumGeometry.dispose();
+        this._bodyMaterial.dispose();
+        this._frustumMaterial.dispose();
+      }
+
+      static getThumbnail(project, resourcesLoader, objectConfiguration) {
+        return 'JsPlatform/Extensions/3d_camera.svg';
+      }
+
+      /**
+       * Build the 12 edges of the frustum from the lens settings.
+       */
+      _updateFrustum(settings, aspect) {
+        const signature = [
+          settings.fieldOfView,
+          settings.near,
+          settings.far,
+          settings.isOrthographic ? 1 : 0,
+          settings.zoom,
+          aspect,
+        ].join('|');
+        if (signature === this._frustumSignature) return;
+        this._frustumSignature = signature;
+
+        const near = Math.min(settings.near, CAMERA_3D_MAX_FRUSTUM_LENGTH / 2);
+        const far = Math.min(
+          Math.max(settings.far, near * 2),
+          CAMERA_3D_MAX_FRUSTUM_LENGTH
+        );
+
+        let nearHalfHeight;
+        let farHalfHeight;
+        if (settings.isOrthographic) {
+          // An orthographic camera has no perspective: the size of the plane
+          // only depends on the zoom and on the resolution of the game.
+          nearHalfHeight =
+            this._project.getGameResolutionHeight() / 2 / settings.zoom;
+          farHalfHeight = nearHalfHeight;
+        } else {
+          const halfFieldOfView = Rendered3DInstance.toRad(
+            Math.min(Math.max(settings.fieldOfView, 1), 179) / 2
+          );
+          const tanHalfFieldOfView = Math.tan(halfFieldOfView);
+          nearHalfHeight = tanHalfFieldOfView * near;
+          farHalfHeight = tanHalfFieldOfView * far;
+        }
+
+        const nearHalfWidth = nearHalfHeight * aspect;
+        const farHalfWidth = farHalfHeight * aspect;
+
+        // The 8 corners of the frustum, in the local space of the camera
+        // (which looks toward -Z).
+        const nearCorners = [
+          [-nearHalfWidth, -nearHalfHeight, -near],
+          [nearHalfWidth, -nearHalfHeight, -near],
+          [nearHalfWidth, nearHalfHeight, -near],
+          [-nearHalfWidth, nearHalfHeight, -near],
+        ];
+        const farCorners = [
+          [-farHalfWidth, -farHalfHeight, -far],
+          [farHalfWidth, -farHalfHeight, -far],
+          [farHalfWidth, farHalfHeight, -far],
+          [-farHalfWidth, farHalfHeight, -far],
+        ];
+
+        const positions = this._frustumPositions;
+        let offset = 0;
+        const addSegment = (from, to) => {
+          positions[offset++] = from[0];
+          positions[offset++] = from[1];
+          positions[offset++] = from[2];
+          positions[offset++] = to[0];
+          positions[offset++] = to[1];
+          positions[offset++] = to[2];
+        };
+        for (let index = 0; index < 4; index++) {
+          const nextIndex = (index + 1) % 4;
+          addSegment(nearCorners[index], nearCorners[nextIndex]);
+          addSegment(farCorners[index], farCorners[nextIndex]);
+          addSegment(nearCorners[index], farCorners[index]);
+        }
+
+        this._frustumGeometry.attributes.position.needsUpdate = true;
+        this._frustumGeometry.computeBoundingSphere();
+      }
+
+      update() {
+        const instance = this._instance;
+        const settings = getCamera3DSettings(
+          this._associatedObjectConfiguration
+        );
+        const color = settings.isActiveAtStart
+          ? CAMERA_3D_ACTIVE_COLOR
+          : CAMERA_3D_INACTIVE_COLOR;
+
+        this._bodyMaterial.color.setHex(color);
+        this._frustumMaterial.color.setHex(color);
+
+        // The camera of a layer is placed like any 3D object, except that the
+        // angle is applied on the Z axis and that the rotations around X and Y
+        // are the ones of the instance.
+        this._threeObject.position.set(
+          instance.getX(),
+          -instance.getY(),
+          instance.getZ()
+        );
+        this._threeObject.rotation.set(
+          Rendered3DInstance.toRad(instance.getRotationX()),
+          Rendered3DInstance.toRad(instance.getRotationY()),
+          -Rendered3DInstance.toRad(instance.getAngle())
+        );
+
+        const gameResolutionHeight = this._project.getGameResolutionHeight();
+        const gameResolutionWidth = this._project.getGameResolutionWidth();
+        const aspect =
+          gameResolutionHeight > 0
+            ? gameResolutionWidth / gameResolutionHeight
+            : 1;
+        this._updateFrustum(settings, aspect);
+
+        this._pixiObject.position.x = instance.getX();
+        this._pixiObject.position.y = instance.getY();
+        this._pixiObject.angle = instance.getAngle();
+        drawCamera3DIcon(this._pixiObject, color, 1);
+      }
+
+      getDefaultWidth() {
+        return this._defaultWidth;
+      }
+
+      getDefaultHeight() {
+        return this._defaultHeight;
+      }
+
+      getDefaultDepth() {
+        return this._defaultDepth;
+      }
+    }
+
+    objectsRenderingService.registerInstanceRenderer(
+      'Scene3D::Camera3DObject',
+      RenderedCamera3DObject2DInstance
+    );
+
+    objectsRenderingService.registerInstance3DRenderer(
+      'Scene3D::Camera3DObject',
+      RenderedCamera3DObject3DInstance
     );
   },
 };

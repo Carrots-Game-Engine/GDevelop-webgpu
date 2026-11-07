@@ -76,6 +76,8 @@ namespace gdjs {
     private _renderer3DWorldScale: float = 100;
     private _renderer3DInverseWorldScale: float = 0.01;
 
+    private _camera3DManager: gdjs.Camera3DManager | null = null;
+
     /**
      * @param runtimeGame The game associated to this scene.
      */
@@ -538,7 +540,32 @@ namespace gdjs {
      * Visibility is set to false if object is hidden, or if
      * object is too far from the camera of its layer ("culling").
      */
+    /**
+     * Get the manager choosing, among the 3D camera objects, the one driving
+     * the camera of its layer.
+     *
+     * The manager is created when a 3D camera is registered.
+     */
+    getCamera3DManager(): gdjs.Camera3DManager {
+      if (!this._camera3DManager) {
+        this._camera3DManager = new gdjs.Camera3DManager(this);
+      }
+      return this._camera3DManager;
+    }
+
+    /**
+     * Return the 3D camera manager if it was already created, without
+     * creating it.
+     */
+    hasCamera3DManager(): boolean {
+      return !!this._camera3DManager;
+    }
+
     _updateObjectsPreRender() {
+      // Apply the active 3D camera before the objects are culled so that the
+      // culling uses the camera that is rendered.
+      if (this._camera3DManager) this._camera3DManager.update();
+
       if (this._timeManager.isFirstFrame()) {
         super._updateObjectsPreRender();
         return;

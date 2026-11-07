@@ -32,6 +32,7 @@ import { shortenString } from '../Utils/StringHelpers';
 import getObjectByName from '../Utils/GetObjectByName';
 import UseSceneEditorCommands from './UseSceneEditorCommands';
 import { type InstancesEditorSettings } from '../InstancesEditor/InstancesEditorSettings';
+import { type Camera3DPreview } from '../InstancesEditor/ViewPosition';
 import { type ResourceManagementProps } from '../ResourcesList/ResourceSource';
 import { type PreviewDebuggerServer } from '../ExportAndShare/PreviewLauncher.flow';
 import EditSceneIcon from '../UI/CustomSvgIcons/EditScene';
@@ -308,6 +309,9 @@ type State = {|
 
   tileMapTileSelection: ?TileMapTileSelection,
 
+  /** The 3D camera the scene is seen through in the editor, if any. */
+  camera3DPreview: Camera3DPreview | null,
+
   lastSelectionType: LastSelectionType,
 |};
 
@@ -355,6 +359,7 @@ export default class SceneEditor extends React.Component<Props, State> {
       editedGroupInitialTab: null,
       extractAsExternalLayoutDialogOpen: false,
       extractAsCustomObjectDialogOpen: false,
+      camera3DPreview: null,
 
       instancesEditorSettings: initialInstancesEditorSettings,
       history: getHistoryInitialState(props.initialInstances, {
@@ -894,6 +899,7 @@ export default class SceneEditor extends React.Component<Props, State> {
       this.props.project !== nextProps.project
     ) {
       this.instancesSelection.clearSelection();
+      this.setState({ camera3DPreview: null });
       this.openSetupGrid(false);
       this.editInstanceVariables(null);
       this.openSceneProperties(false);
@@ -2668,6 +2674,66 @@ export default class SceneEditor extends React.Component<Props, State> {
     );
   };
 
+  /**
+   * Return the state of the 3D camera of an instance, or `null` if the
+   * instance is not a 3D camera.
+   */
+  _getCamera3DPreviewFrame = (
+    instance: gdInitialInstance
+  ): Camera3DPreview | null => {
+    const { project, globalObjectsContainer, objectsContainer } = this.props;
+    const object = getObjectByName(
+      globalObjectsContainer,
+      objectsContainer,
+      instance.getObjectName()
+    );
+    if (!object || object.getType() !== 'Scene3D::Camera3DObject') return null;
+
+    const objectContent =
+      gd.castObject(object.getConfiguration(), gd.ObjectJsImplementation)
+        .content || {};
+    const readNumber = (value: any, defaultValue: number): number => {
+      const number = parseFloat(value);
+      return isNaN(number) ? defaultValue : number;
+    };
+
+    return {
+      x: instance.getX(),
+      y: instance.getY(),
+      z: instance.getZ(),
+      rotationX: instance.getRotationX(),
+      rotationY: instance.getRotationY(),
+      angle: instance.getAngle(),
+      fieldOfView: Math.min(
+        Math.max(readNumber(objectContent.fieldOfView, 45), 1),
+        179
+      ),
+      near: Math.max(readNumber(objectContent.nearPlaneDistance, 0.1), 0.001),
+      far: Math.max(readNumber(objectContent.farPlaneDistance, 2000), 0.002),
+      isOrthographic: objectContent.projection === 'orthographic',
+      zoom: Math.max(readNumber(objectContent.zoom, 1), 0.001),
+      contentWidth: project.getGameResolutionWidth(),
+      contentHeight: project.getGameResolutionHeight(),
+    };
+  };
+
+  /**
+   * Display the scene through a 3D camera of the scene, to see what it will
+   * show when the game is played.
+   *
+   * This only affects the scene editor: the camera of the game is not changed.
+   */
+  _startCamera3DPreview = (instance: gdInitialInstance) => {
+    const camera3DPreview = this._getCamera3DPreviewFrame(instance);
+    if (!camera3DPreview) return;
+
+    this.setState({ camera3DPreview });
+  };
+
+  _stopCamera3DPreview = () => {
+    this.setState({ camera3DPreview: null });
+  };
+
   buildContextMenu = (i18n: I18nType, options: any): any => {
     if (
       options.ignoreSelectedObjectsForContextMenu ||
@@ -2686,6 +2752,15 @@ export default class SceneEditor extends React.Component<Props, State> {
           click: () => this._createNewObjectAndInstanceUnderCursor(),
         },
         { type: 'separator' },
+        ...(this.state.camera3DPreview
+          ? [
+              {
+                label: i18n._(t`Exit the camera view`),
+                click: this._stopCamera3DPreview,
+              },
+              { type: 'separator' },
+            ]
+          : []),
         ...this.getContextMenuZoomItems(i18n),
         { type: 'separator' },
         ...this.getContextMenuLayoutItems(i18n),
@@ -2786,6 +2861,16 @@ export default class SceneEditor extends React.Component<Props, State> {
                   customObjectConfiguration.getVariantName()
                 );
               },
+            }
+          : null,
+        this._getCamera3DPreviewFrame(instances[0])
+          ? {
+              label: this.state.camera3DPreview
+                ? i18n._(t`Exit the camera view`)
+                : i18n._(t`Look through the camera`),
+              click: this.state.camera3DPreview
+                ? this._stopCamera3DPreview
+                : () => this._startCamera3DPreview(instances[0]),
             }
           : null,
         { type: 'separator' },
@@ -3355,6 +3440,7 @@ export default class SceneEditor extends React.Component<Props, State> {
                           ),
                         }),
                     }}
+                    camera3DPreview={this.state.camera3DPreview}
                     instancesEditorShortcutsCallbacks={{
                       onCopy: () =>
                         this.copySelection({ useLastCursorPosition: true }),
