@@ -280,6 +280,16 @@ namespace gdjs {
 
       applyThreeTextureSettings(threeTexture, resource);
       this._applyThreeTextureAnisotropy(threeTexture);
+      // Apply the advanced texture quality settings last, so that the texture
+      // quality system takes precedence when it is enabled (it is disabled by
+      // default, in which case the baseline above is kept).
+      this._resourceLoader._runtimeGame
+        .getTextureQuality3DManager()
+        .applyToTexture(threeTexture, {
+          label: resourceName,
+          kind: 'image',
+          keepNearestFilter: !!(resource && !resource.smoothed),
+        });
       loadedTextures.put(resourceName, threeTexture);
 
       return threeTexture;
@@ -427,6 +437,13 @@ namespace gdjs {
 
       const resource = this._getImageResource(xPositiveResourceName);
       applyThreeTextureSettings(cubeTexture, resource);
+      this._resourceLoader._runtimeGame
+        .getTextureQuality3DManager()
+        .applyToTexture(cubeTexture, {
+          label: key,
+          kind: 'cubemap',
+          keepNearestFilter: !!(resource && !resource.smoothed),
+        });
       this._loadedThreeCubeTextures.set(key, cubeTexture);
       this._loadedThreeCubeTextureKeysByResourceName.add(
         xPositiveResourceName,
