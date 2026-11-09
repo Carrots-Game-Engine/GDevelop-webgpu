@@ -2254,6 +2254,1037 @@ module.exports = {
       targetChoices: ['all', 'front', 'back', 'left', 'right', 'top', 'bottom'],
     });
 
+    /**
+     * Add the actions, conditions and expressions shared by the instanced and
+     * batched mesh objects.
+     *
+     * @param {object} options
+     * @param {any} options.object the object metadata.
+     * @param {string} options.objectType the type of the object.
+     * @param {string} options.objectTypeName the name shown for the object.
+     * @param {boolean} options.isBatched true for the batched mesh object.
+     */
+    const addInstancing3DInstructions = ({
+      object,
+      objectType,
+      objectTypeName,
+      isBatched,
+    }) => {
+      const icon = 'res/conditions/3d_box.svg';
+
+      object
+        .addExpressionAndCondition(
+          'number',
+          'InstanceCount',
+          _('Instance count'),
+          _('the number of active instances'),
+          _('the number of instances'),
+          _('Instances'),
+          icon
+        )
+        .addParameter('object', _(objectTypeName), objectType, false)
+        .useStandardParameters('number', gd.ParameterOptions.makeNewOptions())
+        .setFunctionName('getInstanceCount');
+
+      object
+        .addScopedAction(
+          'AddInstance',
+          _('Add an instance'),
+          _(
+            'Add a new instance at the given position. The position is in scene coordinates, like the object position.'
+          ),
+          _('Add an instance of _PARAM0_ at _PARAM1_; _PARAM2_; _PARAM3_'),
+          _('Instances'),
+          icon,
+          icon
+        )
+        .addParameter('object', _(objectTypeName), objectType, false)
+        .addParameter('number', _('X position'), '', false)
+        .addParameter('number', _('Y position'), '', false)
+        .addParameter('number', _('Z position'), '', false)
+        .setFunctionName('addInstance');
+
+      object
+        .addScopedAction(
+          'RemoveInstance',
+          _('Remove an instance'),
+          _('Remove an instance. Its index can be reused by a new instance.'),
+          _('Remove instance _PARAM1_ of _PARAM0_'),
+          _('Instances'),
+          icon,
+          icon
+        )
+        .addParameter('object', _(objectTypeName), objectType, false)
+        .addParameter('number', _('Instance index (starting at 0)'), '', false)
+        .setFunctionName('removeInstance');
+
+      object
+        .addScopedAction(
+          'ClearInstances',
+          _('Remove all instances'),
+          _('Remove all the instances of the object.'),
+          _('Remove all instances of _PARAM0_'),
+          _('Instances'),
+          icon,
+          icon
+        )
+        .addParameter('object', _(objectTypeName), objectType, false)
+        .setFunctionName('clearInstances');
+
+      object
+        .addScopedAction(
+          'SetInstanceCount',
+          _('Instance count'),
+          _(
+            'Change the number of active instances. Missing instances are added at the center and extra instances are removed.'
+          ),
+          _('Set the number of instances of _PARAM0_ to _PARAM1_'),
+          _('Instances'),
+          icon,
+          icon
+        )
+        .addParameter('object', _(objectTypeName), objectType, false)
+        .addParameter('number', _('Instance count'), '', false)
+        .setFunctionName('setInstanceCount');
+
+      object
+        .addScopedAction(
+          'ResetInstancesLayout',
+          _('Reset the initial layout'),
+          _(
+            'Put the instances back in the layout defined in the object properties.'
+          ),
+          _('Reset the instances layout of _PARAM0_'),
+          _('Instances'),
+          icon,
+          icon
+        )
+        .addParameter('object', _(objectTypeName), objectType, false)
+        .setFunctionName('resetInstancesLayout');
+
+      object
+        .addScopedAction(
+          'SetInstancePosition',
+          _('Position of an instance'),
+          _(
+            'Change the position of an instance. The position is in scene coordinates, like the object position.'
+          ),
+          _(
+            'Set the position of instance _PARAM1_ of _PARAM0_ to _PARAM2_; _PARAM3_; _PARAM4_'
+          ),
+          _('Instances'),
+          icon,
+          icon
+        )
+        .addParameter('object', _(objectTypeName), objectType, false)
+        .addParameter('number', _('Instance index (starting at 0)'), '', false)
+        .addParameter('number', _('X position'), '', false)
+        .addParameter('number', _('Y position'), '', false)
+        .addParameter('number', _('Z position'), '', false)
+        .setFunctionName('setInstancePosition');
+
+      object
+        .addScopedAction(
+          'SetInstanceRotation',
+          _('Rotation of an instance'),
+          _('Change the rotation of an instance, in degrees.'),
+          _(
+            'Set the rotation of instance _PARAM1_ of _PARAM0_ to _PARAM2_; _PARAM3_; _PARAM4_'
+          ),
+          _('Instances'),
+          icon,
+          icon
+        )
+        .addParameter('object', _(objectTypeName), objectType, false)
+        .addParameter('number', _('Instance index (starting at 0)'), '', false)
+        .addParameter('number', _('Rotation on X axis (in degrees)'), '', false)
+        .addParameter('number', _('Rotation on Y axis (in degrees)'), '', false)
+        .addParameter('number', _('Rotation on Z axis (in degrees)'), '', false)
+        .setFunctionName('setInstanceRotation');
+
+      object
+        .addScopedAction(
+          'SetInstanceScale',
+          _('Scale of an instance'),
+          _(
+            'Change the scale of an instance. A scale of 1 gives the instance the size of the object.'
+          ),
+          _(
+            'Set the scale of instance _PARAM1_ of _PARAM0_ to _PARAM2_; _PARAM3_; _PARAM4_'
+          ),
+          _('Instances'),
+          icon,
+          icon
+        )
+        .addParameter('object', _(objectTypeName), objectType, false)
+        .addParameter('number', _('Instance index (starting at 0)'), '', false)
+        .addParameter('number', _('Scale on X axis'), '', false)
+        .addParameter('number', _('Scale on Y axis'), '', false)
+        .addParameter('number', _('Scale on Z axis'), '', false)
+        .setFunctionName('setInstanceScale');
+
+      object
+        .addScopedAction(
+          'SetInstanceColor',
+          _('Color of an instance'),
+          _(
+            'Change the color of an instance. The color is multiplied with the tint of the object.'
+          ),
+          _('Set the color of instance _PARAM1_ of _PARAM0_ to _PARAM2_'),
+          _('Instances'),
+          'res/actions/color24.png',
+          'res/actions/color.png'
+        )
+        .addParameter('object', _(objectTypeName), objectType, false)
+        .addParameter('number', _('Instance index (starting at 0)'), '', false)
+        .addParameter('color', _('Color'), '', false)
+        .setFunctionName('setInstanceColor');
+
+      object
+        .addScopedAction(
+          'SetInstanceVisible',
+          _('Show or hide an instance'),
+          _('Show or hide an instance without removing it.'),
+          _('Hide instance _PARAM1_ of _PARAM0_: _PARAM2_'),
+          _('Instances'),
+          icon,
+          icon
+        )
+        .addParameter('object', _(objectTypeName), objectType, false)
+        .addParameter('number', _('Instance index (starting at 0)'), '', false)
+        .addParameter('yesorno', _('Visible'))
+        .setDefaultValue('true')
+        .setFunctionName('setInstanceVisible');
+
+      object
+        .addScopedCondition(
+          'InstanceIsActive',
+          _('Instance is active'),
+          _('Check if an instance exists and is not removed.'),
+          _('Instance _PARAM1_ of _PARAM0_ is active'),
+          _('Instances'),
+          icon,
+          icon
+        )
+        .addParameter('object', _(objectTypeName), objectType, false)
+        .addParameter('number', _('Instance index (starting at 0)'), '', false)
+        .setFunctionName('isInstanceActive');
+
+      object
+        .addScopedCondition(
+          'InstanceIsVisible',
+          _('Instance is visible'),
+          _('Check if an instance is active and visible.'),
+          _('Instance _PARAM1_ of _PARAM0_ is visible'),
+          _('Instances'),
+          icon,
+          icon
+        )
+        .addParameter('object', _(objectTypeName), objectType, false)
+        .addParameter('number', _('Instance index (starting at 0)'), '', false)
+        .setFunctionName('isInstanceVisible');
+
+      object
+        .addScopedAction(
+          'SetMaterialType',
+          _('Material type'),
+          _('Change the material of the object.'),
+          _('Set the material of _PARAM0_ to _PARAM1_'),
+          _('Material'),
+          icon,
+          icon
+        )
+        .addParameter('object', _(objectTypeName), objectType, false)
+        .addParameter(
+          'stringWithSelector',
+          _('Material type'),
+          JSON.stringify(['Basic', 'StandardWithoutMetalness']),
+          false
+        )
+        .setDefaultValue('"StandardWithoutMetalness"')
+        .setFunctionName('setMaterialType');
+
+      object
+        .addScopedAction(
+          'SetTint',
+          _('Tint color'),
+          _('Change the tint of the object.'),
+          _('Change the tint of _PARAM0_ to _PARAM1_'),
+          _('Material'),
+          'res/actions/color24.png',
+          'res/actions/color.png'
+        )
+        .addParameter('object', _(objectTypeName), objectType, false)
+        .addParameter('color', _('Tint'), '', false)
+        .setFunctionName('setTint');
+
+      object
+        .addScopedAction(
+          'SetCastingShadow',
+          _('Shadow casting'),
+          _('Change whether the instances cast shadows.'),
+          _('Make _PARAM0_ cast shadows: _PARAM1_'),
+          _('Lighting'),
+          icon,
+          icon
+        )
+        .addParameter('object', _(objectTypeName), objectType, false)
+        .addParameter('yesorno', _('Cast shadows'))
+        .setDefaultValue('true')
+        .setFunctionName('setIsCastingShadow');
+
+      object
+        .addScopedAction(
+          'SetReceivingShadow',
+          _('Shadow receiving'),
+          _('Change whether the instances receive shadows.'),
+          _('Make _PARAM0_ receive shadows: _PARAM1_'),
+          _('Lighting'),
+          icon,
+          icon
+        )
+        .addParameter('object', _(objectTypeName), objectType, false)
+        .addParameter('yesorno', _('Receive shadows'))
+        .setDefaultValue('true')
+        .setFunctionName('setIsReceivingShadow');
+
+      object
+        .addScopedAction(
+          'SetFrustumCulled',
+          _('Frustum culling'),
+          _(
+            'Enable or disable frustum culling. Disabling it avoids re-computing the bounds of the instances but renders them even when they are outside of the camera.'
+          ),
+          _('Enable frustum culling for _PARAM0_: _PARAM1_'),
+          _('Performance'),
+          icon,
+          icon
+        )
+        .addParameter('object', _(objectTypeName), objectType, false)
+        .addParameter('yesorno', _('Frustum culling'))
+        .setFunctionName('setFrustumCulled');
+
+      if (isBatched) {
+        object
+          .addScopedAction(
+            'SetInstanceGeometry',
+            _('Geometry of an instance'),
+            _('Change the geometry used by an instance.'),
+            _(
+              'Set the geometry of instance _PARAM1_ of _PARAM0_ to geometry _PARAM2_'
+            ),
+            _('Instances'),
+            icon,
+            icon
+          )
+          .addParameter('object', _(objectTypeName), objectType, false)
+          .addParameter(
+            'number',
+            _('Instance index (starting at 0)'),
+            '',
+            false
+          )
+          .addParameter(
+            'number',
+            _('Geometry index (starting at 0)'),
+            '',
+            false
+          )
+          .setFunctionName('setInstanceGeometry');
+
+        object
+          .addScopedAction(
+            'SetSortObjects',
+            _('Sort instances'),
+            _(
+              'Sort the instances by depth before rendering. Useful with transparent materials.'
+            ),
+            _('Sort the instances of _PARAM0_: _PARAM1_'),
+            _('Performance'),
+            icon,
+            icon
+          )
+          .addParameter('object', _(objectTypeName), objectType, false)
+          .addParameter('yesorno', _('Sort instances'))
+          .setFunctionName('setSortObjects');
+      }
+
+      object
+        .addExpression(
+          'LastInstanceIndex',
+          _('Last added instance index'),
+          _('Return the index of the last added instance (-1 if none).'),
+          _('Instances'),
+          icon
+        )
+        .addParameter('object', _(objectTypeName), objectType, false)
+        .setFunctionName('getLastAddedInstanceIndex');
+
+      const addInstanceIndexExpression = (
+        name,
+        fullName,
+        description,
+        getter
+      ) => {
+        object
+          .addExpression(name, fullName, description, _('Instances'), icon)
+          .addParameter('object', _(objectTypeName), objectType, false)
+          .addParameter(
+            'number',
+            _('Instance index (starting at 0)'),
+            '',
+            false
+          )
+          .setFunctionName(getter);
+      };
+
+      addInstanceIndexExpression(
+        'InstanceX',
+        _('Instance X position'),
+        _('Return the X position of an instance.'),
+        'getInstanceX'
+      );
+      addInstanceIndexExpression(
+        'InstanceY',
+        _('Instance Y position'),
+        _('Return the Y position of an instance.'),
+        'getInstanceY'
+      );
+      addInstanceIndexExpression(
+        'InstanceZ',
+        _('Instance Z position'),
+        _('Return the Z position of an instance.'),
+        'getInstanceZ'
+      );
+      addInstanceIndexExpression(
+        'InstanceRotationX',
+        _('Instance X rotation'),
+        _('Return the rotation of an instance on the X axis, in degrees.'),
+        'getInstanceRotationX'
+      );
+      addInstanceIndexExpression(
+        'InstanceRotationY',
+        _('Instance Y rotation'),
+        _('Return the rotation of an instance on the Y axis, in degrees.'),
+        'getInstanceRotationY'
+      );
+      addInstanceIndexExpression(
+        'InstanceRotationZ',
+        _('Instance Z rotation'),
+        _('Return the rotation of an instance on the Z axis, in degrees.'),
+        'getInstanceRotationZ'
+      );
+      addInstanceIndexExpression(
+        'InstanceScaleX',
+        _('Instance X scale'),
+        _('Return the scale of an instance on the X axis.'),
+        'getInstanceScaleX'
+      );
+      addInstanceIndexExpression(
+        'InstanceScaleY',
+        _('Instance Y scale'),
+        _('Return the scale of an instance on the Y axis.'),
+        'getInstanceScaleY'
+      );
+      addInstanceIndexExpression(
+        'InstanceScaleZ',
+        _('Instance Z scale'),
+        _('Return the scale of an instance on the Z axis.'),
+        'getInstanceScaleZ'
+      );
+
+      object
+        .addStrExpression(
+          'InstanceColor',
+          _('Instance color'),
+          _('Return the color of an instance.'),
+          _('Instances'),
+          icon
+        )
+        .addParameter('object', _(objectTypeName), objectType, false)
+        .addParameter('number', _('Instance index (starting at 0)'), '', false)
+        .setFunctionName('getInstanceColor');
+
+      if (isBatched) {
+        object
+          .addExpression(
+            'GeometryCount',
+            _('Geometry count'),
+            _('Return the number of geometries in the palette.'),
+            _('Geometry'),
+            icon
+          )
+          .addParameter('object', _(objectTypeName), objectType, false)
+          .setFunctionName('getGeometryCount');
+
+        object
+          .addStrExpression(
+            'GeometryName',
+            _('Geometry name'),
+            _('Return the name of a geometry of the palette.'),
+            _('Geometry'),
+            icon
+          )
+          .addParameter('object', _(objectTypeName), objectType, false)
+          .addParameter(
+            'number',
+            _('Geometry index (starting at 0)'),
+            '',
+            false
+          )
+          .setFunctionName('getGeometryName');
+
+        object
+          .addExpression(
+            'InstanceGeometry',
+            _('Instance geometry'),
+            _('Return the geometry index used by an instance.'),
+            _('Instances'),
+            icon
+          )
+          .addParameter('object', _(objectTypeName), objectType, false)
+          .addParameter(
+            'number',
+            _('Instance index (starting at 0)'),
+            '',
+            false
+          )
+          .setFunctionName('getInstanceGeometry');
+      }
+    };
+
+    {
+      const InstancedMesh3DObject = new gd.ObjectJsImplementation();
+      InstancedMesh3DObject.content = {
+        width: 100,
+        height: 100,
+        depth: 100,
+        instanceCount: 16,
+        initialLayout: 'Grid',
+        geometryType: 'Box',
+        modelResourceName: '',
+        modelMeshName: '',
+        materialType: 'StandardWithoutMetalness',
+        tint: '255;255;255',
+        isCastingShadow: true,
+        isReceivingShadow: true,
+        frustumCulled: false,
+      };
+      InstancedMesh3DObject.updateProperty = function (propertyName, newValue) {
+        const objectContent = this.content;
+        if (
+          propertyName === 'width' ||
+          propertyName === 'height' ||
+          propertyName === 'depth'
+        ) {
+          const value = parseFloat(newValue);
+          if (isNaN(value) || value <= 0) return false;
+          objectContent[propertyName] = value;
+          return true;
+        }
+        if (propertyName === 'instanceCount') {
+          const value = parseInt(newValue, 10);
+          if (isNaN(value) || value < 1) return false;
+          objectContent.instanceCount = Math.min(1000000, value);
+          return true;
+        }
+        if (propertyName === 'initialLayout') {
+          if (['Grid', 'Line', 'Random', 'None'].includes(newValue)) {
+            objectContent.initialLayout = newValue;
+            return true;
+          }
+          return false;
+        }
+        if (propertyName === 'geometryType') {
+          if (
+            [
+              'Box',
+              'Sphere',
+              'Cylinder',
+              'Cone',
+              'Torus',
+              'Plane',
+              'Model',
+            ].includes(newValue)
+          ) {
+            objectContent.geometryType = newValue;
+            return true;
+          }
+          return false;
+        }
+        if (
+          propertyName === 'modelResourceName' ||
+          propertyName === 'modelMeshName' ||
+          propertyName === 'tint'
+        ) {
+          objectContent[propertyName] = newValue;
+          return true;
+        }
+        if (propertyName === 'materialType') {
+          if (newValue === 'Basic') {
+            objectContent.materialType = 'Basic';
+            return true;
+          }
+          if (newValue === 'StandardWithoutMetalness') {
+            objectContent.materialType = 'StandardWithoutMetalness';
+            return true;
+          }
+          return false;
+        }
+        if (
+          propertyName === 'isCastingShadow' ||
+          propertyName === 'isReceivingShadow' ||
+          propertyName === 'frustumCulled'
+        ) {
+          objectContent[propertyName] = newValue === '1';
+          return true;
+        }
+        return false;
+      };
+      InstancedMesh3DObject.getProperties = function () {
+        const objectProperties = new gd.MapStringPropertyDescriptor();
+        const content = this.content;
+
+        objectProperties
+          .getOrCreate('width')
+          .setValue((content.width || 100).toString())
+          .setType('number')
+          .setLabel(_('Width'))
+          .setMeasurementUnit(gd.MeasurementUnit.getPixel())
+          .setGroup(_('Default size'));
+        objectProperties
+          .getOrCreate('height')
+          .setValue((content.height || 100).toString())
+          .setType('number')
+          .setLabel(_('Height'))
+          .setMeasurementUnit(gd.MeasurementUnit.getPixel())
+          .setGroup(_('Default size'));
+        objectProperties
+          .getOrCreate('depth')
+          .setValue((content.depth || 100).toString())
+          .setType('number')
+          .setLabel(_('Depth'))
+          .setMeasurementUnit(gd.MeasurementUnit.getPixel())
+          .setGroup(_('Default size'));
+
+        objectProperties
+          .getOrCreate('instanceCount')
+          .setValue((content.instanceCount || 16).toString())
+          .setType('number')
+          .setLabel(_('Instance count'))
+          .setDescription(
+            _(
+              'Number of instances created when the object is added to the scene. More instances are allocated automatically when needed.'
+            )
+          )
+          .setGroup(_('Instances'));
+        objectProperties
+          .getOrCreate('initialLayout')
+          .setValue(content.initialLayout || 'Grid')
+          .setType('choice')
+          .addChoice('Grid', _('Grid'))
+          .addChoice('Line', _('Line'))
+          .addChoice('Random', _('Random'))
+          .addChoice('None', _('All at the center'))
+          .setLabel(_('Initial layout'))
+          .setGroup(_('Instances'));
+
+        objectProperties
+          .getOrCreate('geometryType')
+          .setValue(content.geometryType || 'Box')
+          .setType('choice')
+          .addChoice('Box', _('Box'))
+          .addChoice('Sphere', _('Sphere'))
+          .addChoice('Cylinder', _('Cylinder'))
+          .addChoice('Cone', _('Cone'))
+          .addChoice('Torus', _('Torus'))
+          .addChoice('Plane', _('Plane'))
+          .addChoice('Model', _('Mesh of a 3D model'))
+          .setLabel(_('Geometry'))
+          .setGroup(_('Geometry'));
+        const isModelGeometry = content.geometryType === 'Model';
+        objectProperties
+          .getOrCreate('modelResourceName')
+          .setValue(content.modelResourceName || '')
+          .setType('resource')
+          .addExtraInfo('model3D')
+          .setLabel(_('3D model'))
+          .setHidden(!isModelGeometry)
+          .setGroup(_('Geometry'));
+        objectProperties
+          .getOrCreate('modelMeshName')
+          .setValue(content.modelMeshName || '')
+          .setType('string')
+          .setLabel(_('Mesh name'))
+          .setDescription(
+            _(
+              'Name of the mesh to instance. Leave empty to use the first mesh of the model.'
+            )
+          )
+          .setHidden(!isModelGeometry)
+          .setGroup(_('Geometry'));
+
+        objectProperties
+          .getOrCreate('materialType')
+          .setValue(content.materialType || 'StandardWithoutMetalness')
+          .setType('choice')
+          .addChoice('Basic', _('Basic (no lighting, no shadows)'))
+          .addChoice(
+            'StandardWithoutMetalness',
+            _('Standard (without metalness)')
+          )
+          .setLabel(_('Material type'))
+          .setGroup(_('Material'));
+        objectProperties
+          .getOrCreate('tint')
+          .setValue(content.tint || '255;255;255')
+          .setType('Color')
+          .setLabel(_('Tint'))
+          .setGroup(_('Material'));
+
+        objectProperties
+          .getOrCreate('isCastingShadow')
+          .setValue(content.isCastingShadow ? 'true' : 'false')
+          .setType('boolean')
+          .setLabel(_('Shadow casting'))
+          .setGroup(_('Lighting'));
+        objectProperties
+          .getOrCreate('isReceivingShadow')
+          .setValue(content.isReceivingShadow ? 'true' : 'false')
+          .setType('boolean')
+          .setLabel(_('Shadow receiving'))
+          .setGroup(_('Lighting'));
+
+        objectProperties
+          .getOrCreate('frustumCulled')
+          .setValue(content.frustumCulled ? 'true' : 'false')
+          .setType('boolean')
+          .setLabel(_('Frustum culling'))
+          .setDescription(
+            _(
+              'Disable it when instances move a lot: the bounds of all the instances would otherwise be recomputed.'
+            )
+          )
+          .setGroup(_('Performance'))
+          .setAdvanced(true);
+
+        return objectProperties;
+      };
+      InstancedMesh3DObject.updateInitialInstanceProperty = function () {
+        return false;
+      };
+      InstancedMesh3DObject.getInitialInstanceProperties = function () {
+        return new gd.MapStringPropertyDescriptor();
+      };
+
+      const object = extension
+        .addObject(
+          'InstancedMesh3DObject',
+          _('3D Instanced Mesh'),
+          _(
+            'Draw many copies of the same 3D geometry at once, with a very low rendering cost. Ideal for forests, rocks, bullets, particles and crowds.'
+          ),
+          'JsPlatform/Extensions/3d_box.svg',
+          InstancedMesh3DObject
+        )
+        .setCategory('General')
+        .setHelpPath('/objects/3d-instanced-mesh')
+        // Effects are unsupported because the object is not rendered with PIXI.
+        .addDefaultBehavior('ResizableCapability::ResizableBehavior')
+        .addDefaultBehavior('ScalableCapability::ScalableBehavior')
+        .addDefaultBehavior('FlippableCapability::FlippableBehavior')
+        .addDefaultBehavior('Scene3D::Base3DBehavior')
+        .markAsRenderedIn3D()
+        .addPropertyGroup(_('Default size'))
+        .addPropertyGroup(_('Instances'))
+        .addPropertyGroup(_('Geometry'))
+        .addPropertyGroup(_('Material'))
+        .addPropertyGroup(_('Lighting'))
+        .addPropertyGroup(_('Performance'))
+        .setIncludeFile('Extensions/3D/A_RuntimeObject3D.js')
+        .addIncludeFile('Extensions/3D/A_RuntimeObject3DRenderer.js')
+        .addIncludeFile('Extensions/3D/A_Instancing3DUtils.js')
+        .addIncludeFile(
+          'Extensions/3D/A_Instancing3DRuntimeObject3DRenderer.js'
+        )
+        .addIncludeFile('Extensions/3D/InstancedMesh3DRuntimeObject.js')
+        .addIncludeFile(
+          'Extensions/3D/InstancedMesh3DRuntimeObject3DRenderer.js'
+        );
+
+      addInstancing3DInstructions({
+        object,
+        objectType: 'InstancedMesh3DObject',
+        objectTypeName: '3D instanced mesh',
+        isBatched: false,
+      });
+    }
+
+    {
+      const BatchedMesh3DObject = new gd.ObjectJsImplementation();
+      BatchedMesh3DObject.content = {
+        width: 100,
+        height: 100,
+        depth: 100,
+        instanceCount: 16,
+        initialLayout: 'Grid',
+        geometryTypes: 'Box,Sphere,Cylinder',
+        modelResourceName: '',
+        modelMeshNames: '',
+        materialType: 'StandardWithoutMetalness',
+        tint: '255;255;255',
+        isCastingShadow: true,
+        isReceivingShadow: true,
+        frustumCulled: true,
+        sortObjects: false,
+      };
+      BatchedMesh3DObject.updateProperty = function (propertyName, newValue) {
+        const objectContent = this.content;
+        if (
+          propertyName === 'width' ||
+          propertyName === 'height' ||
+          propertyName === 'depth'
+        ) {
+          const value = parseFloat(newValue);
+          if (isNaN(value) || value <= 0) return false;
+          objectContent[propertyName] = value;
+          return true;
+        }
+        if (propertyName === 'instanceCount') {
+          const value = parseInt(newValue, 10);
+          if (isNaN(value) || value < 1) return false;
+          objectContent.instanceCount = Math.min(1000000, value);
+          return true;
+        }
+        if (propertyName === 'initialLayout') {
+          if (['Grid', 'Line', 'Random', 'None'].includes(newValue)) {
+            objectContent.initialLayout = newValue;
+            return true;
+          }
+          return false;
+        }
+        if (
+          propertyName === 'geometryTypes' ||
+          propertyName === 'modelResourceName' ||
+          propertyName === 'modelMeshNames' ||
+          propertyName === 'tint'
+        ) {
+          objectContent[propertyName] = newValue;
+          return true;
+        }
+        if (propertyName === 'materialType') {
+          if (newValue === 'Basic') {
+            objectContent.materialType = 'Basic';
+            return true;
+          }
+          if (newValue === 'StandardWithoutMetalness') {
+            objectContent.materialType = 'StandardWithoutMetalness';
+            return true;
+          }
+          return false;
+        }
+        if (
+          propertyName === 'isCastingShadow' ||
+          propertyName === 'isReceivingShadow' ||
+          propertyName === 'frustumCulled' ||
+          propertyName === 'sortObjects'
+        ) {
+          objectContent[propertyName] = newValue === '1';
+          return true;
+        }
+        return false;
+      };
+      BatchedMesh3DObject.getProperties = function () {
+        const objectProperties = new gd.MapStringPropertyDescriptor();
+        const content = this.content;
+
+        objectProperties
+          .getOrCreate('width')
+          .setValue((content.width || 100).toString())
+          .setType('number')
+          .setLabel(_('Width'))
+          .setMeasurementUnit(gd.MeasurementUnit.getPixel())
+          .setGroup(_('Default size'));
+        objectProperties
+          .getOrCreate('height')
+          .setValue((content.height || 100).toString())
+          .setType('number')
+          .setLabel(_('Height'))
+          .setMeasurementUnit(gd.MeasurementUnit.getPixel())
+          .setGroup(_('Default size'));
+        objectProperties
+          .getOrCreate('depth')
+          .setValue((content.depth || 100).toString())
+          .setType('number')
+          .setLabel(_('Depth'))
+          .setMeasurementUnit(gd.MeasurementUnit.getPixel())
+          .setGroup(_('Default size'));
+
+        objectProperties
+          .getOrCreate('instanceCount')
+          .setValue((content.instanceCount || 16).toString())
+          .setType('number')
+          .setLabel(_('Instance count'))
+          .setDescription(
+            _(
+              'Number of instances created when the object is added to the scene. More instances are allocated automatically when needed.'
+            )
+          )
+          .setGroup(_('Instances'));
+        objectProperties
+          .getOrCreate('initialLayout')
+          .setValue(content.initialLayout || 'Grid')
+          .setType('choice')
+          .addChoice('Grid', _('Grid'))
+          .addChoice('Line', _('Line'))
+          .addChoice('Random', _('Random'))
+          .addChoice('None', _('All at the center'))
+          .setLabel(_('Initial layout'))
+          .setGroup(_('Instances'));
+
+        objectProperties
+          .getOrCreate('geometryTypes')
+          .setValue(content.geometryTypes || 'Box,Sphere,Cylinder')
+          .setType('string')
+          .setLabel(_('Primitives'))
+          .setDescription(
+            _(
+              'Comma separated list of primitives: Box, Sphere, Cylinder, Cone, Torus, Plane.'
+            )
+          )
+          .setGroup(_('Geometry'));
+        objectProperties
+          .getOrCreate('modelResourceName')
+          .setValue(content.modelResourceName || '')
+          .setType('resource')
+          .addExtraInfo('model3D')
+          .setLabel(_('3D model (optional)'))
+          .setDescription(
+            _(
+              'The meshes of this model are added after the primitives, to the geometry palette.'
+            )
+          )
+          .setGroup(_('Geometry'));
+        objectProperties
+          .getOrCreate('modelMeshNames')
+          .setValue(content.modelMeshNames || '')
+          .setType('string')
+          .setLabel(_('Model mesh names'))
+          .setDescription(
+            _(
+              'Comma separated list of the meshes to add. Leave empty to add all the meshes of the model.'
+            )
+          )
+          .setGroup(_('Geometry'));
+
+        objectProperties
+          .getOrCreate('materialType')
+          .setValue(content.materialType || 'StandardWithoutMetalness')
+          .setType('choice')
+          .addChoice('Basic', _('Basic (no lighting, no shadows)'))
+          .addChoice(
+            'StandardWithoutMetalness',
+            _('Standard (without metalness)')
+          )
+          .setLabel(_('Material type'))
+          .setGroup(_('Material'));
+        objectProperties
+          .getOrCreate('tint')
+          .setValue(content.tint || '255;255;255')
+          .setType('Color')
+          .setLabel(_('Tint'))
+          .setGroup(_('Material'));
+
+        objectProperties
+          .getOrCreate('isCastingShadow')
+          .setValue(content.isCastingShadow ? 'true' : 'false')
+          .setType('boolean')
+          .setLabel(_('Shadow casting'))
+          .setGroup(_('Lighting'));
+        objectProperties
+          .getOrCreate('isReceivingShadow')
+          .setValue(content.isReceivingShadow ? 'true' : 'false')
+          .setType('boolean')
+          .setLabel(_('Shadow receiving'))
+          .setGroup(_('Lighting'));
+
+        objectProperties
+          .getOrCreate('frustumCulled')
+          .setValue(content.frustumCulled ? 'true' : 'false')
+          .setType('boolean')
+          .setLabel(_('Frustum culling'))
+          .setDescription(
+            _(
+              'Check the visibility of each instance. Disable it when instances move a lot.'
+            )
+          )
+          .setGroup(_('Performance'))
+          .setAdvanced(true);
+        objectProperties
+          .getOrCreate('sortObjects')
+          .setValue(content.sortObjects ? 'true' : 'false')
+          .setType('boolean')
+          .setLabel(_('Sort instances'))
+          .setDescription(
+            _(
+              'Sort the instances by depth before rendering. Useful with transparent materials, but slower.'
+            )
+          )
+          .setGroup(_('Performance'))
+          .setAdvanced(true);
+
+        return objectProperties;
+      };
+      BatchedMesh3DObject.updateInitialInstanceProperty = function () {
+        return false;
+      };
+      BatchedMesh3DObject.getInitialInstanceProperties = function () {
+        return new gd.MapStringPropertyDescriptor();
+      };
+
+      const object = extension
+        .addObject(
+          'BatchedMesh3DObject',
+          _('3D Batched Mesh'),
+          _(
+            'Draw many instances of several 3D geometries with a single draw call. Ideal for tiles, props and modular levels.'
+          ),
+          'JsPlatform/Extensions/3d_model.svg',
+          BatchedMesh3DObject
+        )
+        .setCategory('General')
+        .setHelpPath('/objects/3d-batched-mesh')
+        // Effects are unsupported because the object is not rendered with PIXI.
+        .addDefaultBehavior('ResizableCapability::ResizableBehavior')
+        .addDefaultBehavior('ScalableCapability::ScalableBehavior')
+        .addDefaultBehavior('FlippableCapability::FlippableBehavior')
+        .addDefaultBehavior('Scene3D::Base3DBehavior')
+        .markAsRenderedIn3D()
+        .addPropertyGroup(_('Default size'))
+        .addPropertyGroup(_('Instances'))
+        .addPropertyGroup(_('Geometry'))
+        .addPropertyGroup(_('Material'))
+        .addPropertyGroup(_('Lighting'))
+        .addPropertyGroup(_('Performance'))
+        .setIncludeFile('Extensions/3D/A_RuntimeObject3D.js')
+        .addIncludeFile('Extensions/3D/A_RuntimeObject3DRenderer.js')
+        .addIncludeFile('Extensions/3D/A_Instancing3DUtils.js')
+        .addIncludeFile(
+          'Extensions/3D/A_Instancing3DRuntimeObject3DRenderer.js'
+        )
+        .addIncludeFile('Extensions/3D/BatchedMesh3DRuntimeObject.js')
+        .addIncludeFile(
+          'Extensions/3D/BatchedMesh3DRuntimeObject3DRenderer.js'
+        );
+
+      addInstancing3DInstructions({
+        object,
+        objectType: 'BatchedMesh3DObject',
+        objectTypeName: '3D batched mesh',
+        isBatched: true,
+      });
+    }
+
     extension
       .addExpressionAndConditionAndAction(
         'number',
@@ -6006,6 +7037,728 @@ module.exports = {
     objectsRenderingService.registerInstance3DRenderer(
       'Scene3D::Model3DObject',
       Model3DRendered3DInstance
+    );
+
+    /**
+     * Copy a geometry in a plain indexed geometry with only position, normal
+     * and UV attributes, flip it on Y and stretch it in a 1x1x1 cube. This is
+     * the editor equivalent of `gdjs.prepareInstancing3DGeometry`.
+     */
+    const prepareInstancingPreviewGeometry = (source) => {
+      const sourcePosition = source.getAttribute('position');
+      if (!sourcePosition) return new THREE.BoxGeometry(1, 1, 1);
+      const vertexCount = sourcePosition.count;
+      const positions = new Float32Array(vertexCount * 3);
+      const normals = new Float32Array(vertexCount * 3);
+      const uvs = new Float32Array(vertexCount * 2);
+      const sourceNormal = source.getAttribute('normal');
+      const sourceUv = source.getAttribute('uv');
+      for (let i = 0; i < vertexCount; i++) {
+        positions[i * 3] = sourcePosition.getX(i);
+        // Flip on Y to match the GDevelop 3D convention.
+        positions[i * 3 + 1] = -sourcePosition.getY(i);
+        positions[i * 3 + 2] = sourcePosition.getZ(i);
+        if (sourceNormal) {
+          normals[i * 3] = sourceNormal.getX(i);
+          normals[i * 3 + 1] = -sourceNormal.getY(i);
+          normals[i * 3 + 2] = sourceNormal.getZ(i);
+        }
+        if (sourceUv) {
+          uvs[i * 2] = sourceUv.getX(i);
+          uvs[i * 2 + 1] = sourceUv.getY(i);
+        }
+      }
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute(
+        'position',
+        new THREE.BufferAttribute(positions, 3)
+      );
+      geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+      geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+      const sourceIndex = source.getIndex();
+      const indexCount = sourceIndex ? sourceIndex.count : vertexCount;
+      const indices =
+        indexCount > 65535
+          ? new Uint32Array(indexCount)
+          : new Uint16Array(indexCount);
+      if (sourceIndex) {
+        for (let i = 0; i < indexCount; i++) {
+          indices[i] = sourceIndex.getX(i);
+        }
+        // Reverse the winding as the geometry was flipped on Y.
+        for (let i = 0; i < indexCount; i += 3) {
+          const second = indices[i + 1];
+          indices[i + 1] = indices[i + 2];
+          indices[i + 2] = second;
+        }
+      } else {
+        for (let i = 0; i < indexCount; i++) {
+          indices[i] = i;
+        }
+        for (let i = 0; i < indexCount; i += 3) {
+          const second = indices[i + 1];
+          indices[i + 1] = indices[i + 2];
+          indices[i + 2] = second;
+        }
+      }
+      geometry.setIndex(new THREE.BufferAttribute(indices, 1));
+      if (!sourceNormal) geometry.computeVertexNormals();
+
+      geometry.computeBoundingBox();
+      const boundingBox = geometry.boundingBox;
+      const size = new THREE.Vector3();
+      const center = new THREE.Vector3();
+      boundingBox.getSize(size);
+      boundingBox.getCenter(center);
+      geometry.applyMatrix4(
+        new THREE.Matrix4()
+          .makeScale(
+            size.x < epsilon ? 1 : 1 / size.x,
+            size.y < epsilon ? 1 : 1 / size.y,
+            size.z < epsilon ? 1 : 1 / size.z
+          )
+          .multiply(
+            new THREE.Matrix4().makeTranslation(-center.x, -center.y, -center.z)
+          )
+      );
+      geometry.computeBoundingBox();
+      geometry.computeBoundingSphere();
+      return geometry;
+    };
+
+    const createInstancingPreviewPrimitiveGeometry = (primitiveName) => {
+      let source;
+      switch (primitiveName) {
+        case 'Sphere':
+          source = new THREE.SphereGeometry(0.5, 16, 12);
+          break;
+        case 'Cylinder':
+          source = new THREE.CylinderGeometry(0.5, 0.5, 1, 16, 1);
+          break;
+        case 'Cone':
+          source = new THREE.ConeGeometry(0.5, 1, 16, 1);
+          break;
+        case 'Torus':
+          source = new THREE.TorusGeometry(0.35, 0.15, 12, 24);
+          break;
+        case 'Plane':
+          source = new THREE.PlaneGeometry(1, 1);
+          break;
+        case 'Box':
+        default:
+          source = new THREE.BoxGeometry(1, 1, 1);
+          break;
+      }
+      const geometry = prepareInstancingPreviewGeometry(source);
+      source.dispose();
+      return geometry;
+    };
+
+    const parseInstancingPreviewPrimitiveNames = (value) => {
+      const validNames = [
+        'Box',
+        'Sphere',
+        'Cylinder',
+        'Cone',
+        'Torus',
+        'Plane',
+      ];
+      const result = [];
+      for (const part of (value || '').split(',')) {
+        const normalizedPart = part.trim().toLowerCase();
+        const primitiveName = validNames.find(
+          (name) => name.toLowerCase() === normalizedPart
+        );
+        if (primitiveName && !result.includes(primitiveName)) {
+          result.push(primitiveName);
+        }
+      }
+      return result;
+    };
+
+    const parseInstancingPreviewMeshNames = (value) => {
+      return (value || '')
+        .split(',')
+        .map((name) => name.trim())
+        .filter((name) => name.length > 0);
+    };
+
+    const extractInstancingPreviewModelGeometries = (model, meshNames) => {
+      const geometries = [];
+      if (!model || !model.scene) return geometries;
+      model.scene.updateMatrixWorld(true);
+      const normalizedMeshNames = meshNames.map((name) => name.toLowerCase());
+      model.scene.traverse((node) => {
+        const mesh = node;
+        if (!mesh.isMesh || !mesh.geometry) return;
+        if (
+          normalizedMeshNames.length > 0 &&
+          !normalizedMeshNames.includes((mesh.name || '').toLowerCase())
+        ) {
+          return;
+        }
+        const geometry = mesh.geometry.clone();
+        geometry.applyMatrix4(mesh.matrixWorld);
+        geometries.push(prepareInstancingPreviewGeometry(geometry));
+        geometry.dispose();
+      });
+      return geometries;
+    };
+
+    const getInstancingPreviewLayout = (layout, index, count) => {
+      const position = { x: 0.5, y: 0.5, z: 0.5 };
+      let scale = 1;
+      if (count <= 1) return { position, scale };
+      if (layout === 'Line') {
+        position.x = (index + 0.5) / count;
+        scale = Math.max(0.02, 0.9 / count);
+      } else if (layout === 'Random') {
+        const hash = (value) => {
+          const result = Math.sin(value * 127.1 + 311.7) * 43758.5453;
+          return result - Math.floor(result);
+        };
+        position.x = 0.2 + 0.6 * hash(index + 1);
+        position.y = 0.2 + 0.6 * hash(index + 2);
+        position.z = 0.2 + 0.6 * hash(index + 3);
+        scale = 0.15;
+      } else if (layout !== 'None') {
+        const columns = Math.ceil(Math.sqrt(count));
+        const rows = Math.ceil(count / columns);
+        position.x = ((index % columns) + 0.5) / columns;
+        position.y = (Math.floor(index / columns) + 0.5) / rows;
+        scale = Math.max(0.02, Math.min(0.9 / columns, 0.9 / rows));
+      }
+      return { position, scale };
+    };
+
+    const writeInstancingPreviewMatrices = (
+      mesh,
+      instanceCount,
+      getGeometryIndex,
+      layout
+    ) => {
+      const matrix = new THREE.Matrix4();
+      const position = new THREE.Vector3();
+      const quaternion = new THREE.Quaternion();
+      const scale = new THREE.Vector3();
+      for (let index = 0; index < instanceCount; index++) {
+        const layoutData = getInstancingPreviewLayout(
+          layout,
+          index,
+          instanceCount
+        );
+        position.set(
+          layoutData.position.x - 0.5,
+          layoutData.position.y - 0.5,
+          layoutData.position.z - 0.5
+        );
+        scale.set(layoutData.scale, layoutData.scale, layoutData.scale);
+        matrix.compose(position, quaternion, scale);
+        mesh.setMatrixAt(index, matrix);
+        if (getGeometryIndex) {
+          mesh.setGeometryIdAt(index, getGeometryIndex(index));
+        }
+      }
+      if (mesh.instanceMatrix) mesh.instanceMatrix.needsUpdate = true;
+    };
+
+    const createInstancingPreviewMaterial = (content) => {
+      return new THREE.MeshBasicMaterial({
+        color: objectsRenderingService.rgbOrHexToHexNumber(
+          content.tint || '255;255;255'
+        ),
+      });
+    };
+
+    class RenderedInstancing3D2DInstance extends RenderedInstance {
+      constructor(
+        project,
+        instance,
+        associatedObjectConfiguration,
+        pixiContainer,
+        pixiResourcesLoader
+      ) {
+        super(
+          project,
+          instance,
+          associatedObjectConfiguration,
+          pixiContainer,
+          pixiResourcesLoader
+        );
+        this._defaultWidth = 100;
+        this._defaultHeight = 100;
+        this._defaultDepth = 100;
+        this._pixiObject = new PIXI.Graphics();
+        this._pixiContainer.addChild(this._pixiObject);
+        this.update();
+      }
+
+      update() {
+        const object = gd.castObject(
+          this._associatedObjectConfiguration,
+          gd.ObjectJsImplementation
+        );
+        this._defaultWidth = object.content.width || 100;
+        this._defaultHeight = object.content.height || 100;
+        this._defaultDepth = object.content.depth || 100;
+        const width = this.getWidth();
+        const height = this.getHeight();
+        const centerX = width / 2;
+        const centerY = height / 2;
+
+        this._pixiObject.clear();
+        this._pixiObject.beginFill(0x999999, 0.2);
+        this._pixiObject.lineStyle(1, 0xffd900, 0.8);
+        this._pixiObject.moveTo(-centerX, -centerY);
+        this._pixiObject.lineTo(centerX, -centerY);
+        this._pixiObject.lineTo(centerX, centerY);
+        this._pixiObject.lineTo(-centerX, centerY);
+        this._pixiObject.endFill();
+        this._pixiObject.position.x = this._instance.getX() + centerX;
+        this._pixiObject.position.y = this._instance.getY() + centerY;
+        this._pixiObject.angle = this._instance.getAngle();
+      }
+
+      onRemovedFromScene() {
+        super.onRemovedFromScene();
+        this._pixiObject.destroy({ children: true });
+      }
+
+      getDefaultWidth() {
+        return this._defaultWidth;
+      }
+
+      getDefaultHeight() {
+        return this._defaultHeight;
+      }
+
+      getDefaultDepth() {
+        return this._defaultDepth;
+      }
+    }
+
+    class RenderedInstancedMesh3DInstance extends Rendered3DInstance {
+      constructor(
+        project,
+        instance,
+        associatedObjectConfiguration,
+        pixiContainer,
+        threeGroup,
+        pixiResourcesLoader
+      ) {
+        super(
+          project,
+          instance,
+          associatedObjectConfiguration,
+          pixiContainer,
+          threeGroup,
+          pixiResourcesLoader
+        );
+        this._pixiObject = new PIXI.Graphics();
+        this._pixiContainer.addChild(this._pixiObject);
+        this._threeObject = new THREE.Group();
+        this._threeObject.rotation.order = 'ZYX';
+        this._threeGroup.add(this._threeObject);
+        this._mesh = null;
+        this._material = null;
+        this._tint = '';
+        this._rebuildKey = '';
+        this._rebuildGeneration = 0;
+        this._defaultWidth = 100;
+        this._defaultHeight = 100;
+        this._defaultDepth = 100;
+        this.update();
+      }
+
+      static getThumbnail(project, resourcesLoader, objectConfiguration) {
+        const content = gd.castObject(
+          objectConfiguration,
+          gd.ObjectJsImplementation
+        ).content;
+        if (content.modelResourceName && resourcesLoader.getModel3DPreviewUrl) {
+          const previewUrl = resourcesLoader.getModel3DPreviewUrl(
+            project,
+            content.modelResourceName
+          );
+          if (previewUrl) return previewUrl;
+        }
+        return 'JsPlatform/Extensions/3d_box.svg';
+      }
+
+      _disposePreviewMesh() {
+        if (this._mesh) {
+          this._threeObject.remove(this._mesh);
+          this._mesh.geometry.dispose();
+          this._mesh.dispose();
+          this._mesh = null;
+        }
+      }
+
+      _updateMaterial(content) {
+        const tint = content.tint || '255;255;255';
+        if (!this._material) {
+          this._material = createInstancingPreviewMaterial(content);
+          this._tint = tint;
+          return;
+        }
+        if (this._tint !== tint) {
+          this._tint = tint;
+          this._material.color.setHex(
+            objectsRenderingService.rgbOrHexToHexNumber(tint)
+          );
+        }
+      }
+
+      async _rebuildPreview(content) {
+        const generation = ++this._rebuildGeneration;
+        const instanceCount = Math.min(
+          64,
+          Math.max(1, content.instanceCount || 16)
+        );
+        let geometry = null;
+        if (content.geometryType === 'Model' && content.modelResourceName) {
+          try {
+            const model = await this._pixiResourcesLoader.get3DModel(
+              this._project,
+              content.modelResourceName
+            );
+            const geometries = extractInstancingPreviewModelGeometries(
+              model,
+              parseInstancingPreviewMeshNames(content.modelMeshName)
+            );
+            if (geometries.length > 0) {
+              geometry = geometries[0];
+              for (let i = 1; i < geometries.length; i++) {
+                geometries[i].dispose();
+              }
+            }
+          } catch (error) {
+            // The model may be missing: fallback to a box.
+          }
+        }
+        if (!geometry) {
+          geometry = createInstancingPreviewPrimitiveGeometry(
+            content.geometryType && content.geometryType !== 'Model'
+              ? content.geometryType
+              : 'Box'
+          );
+        }
+        if (this._wasDestroyed || generation !== this._rebuildGeneration) {
+          geometry.dispose();
+          return;
+        }
+
+        this._disposePreviewMesh();
+        this._updateMaterial(content);
+        const mesh = new THREE.InstancedMesh(
+          geometry,
+          this._material,
+          instanceCount
+        );
+        writeInstancingPreviewMatrices(
+          mesh,
+          instanceCount,
+          null,
+          content.initialLayout || 'Grid'
+        );
+        this._mesh = mesh;
+        this._threeObject.add(mesh);
+      }
+
+      update() {
+        const object = gd.castObject(
+          this._associatedObjectConfiguration,
+          gd.ObjectJsImplementation
+        );
+        const content = object.content;
+        this._defaultWidth = content.width || 100;
+        this._defaultHeight = content.height || 100;
+        this._defaultDepth = content.depth || 100;
+        const width = this.getWidth();
+        const height = this.getHeight();
+        const depth = this.getDepth();
+
+        this._threeObject.position.set(
+          this._instance.getX() + width / 2,
+          this._instance.getY() + height / 2,
+          this._instance.getZ() + depth / 2
+        );
+        this._threeObject.rotation.set(
+          RenderedInstance.toRad(this._instance.getRotationX()),
+          RenderedInstance.toRad(this._instance.getRotationY()),
+          RenderedInstance.toRad(this._instance.getAngle())
+        );
+        this._threeObject.scale.set(
+          width * (this._instance.isFlippedX() ? -1 : 1),
+          height * (this._instance.isFlippedY() ? -1 : 1),
+          depth * (this._instance.isFlippedZ() ? -1 : 1)
+        );
+
+        this._updateMaterial(content);
+        const rebuildKey = JSON.stringify([
+          content.instanceCount,
+          content.initialLayout,
+          content.geometryType,
+          content.modelResourceName,
+          content.modelMeshName,
+        ]);
+        if (rebuildKey !== this._rebuildKey) {
+          this._rebuildKey = rebuildKey;
+          this._rebuildPreview(content);
+        }
+      }
+
+      onRemovedFromScene() {
+        this._rebuildGeneration++;
+        this._disposePreviewMesh();
+        if (this._material) {
+          this._material.dispose();
+          this._material = null;
+        }
+        super.onRemovedFromScene();
+        this._pixiObject.destroy({ children: true });
+      }
+
+      getDefaultWidth() {
+        return this._defaultWidth;
+      }
+
+      getDefaultHeight() {
+        return this._defaultHeight;
+      }
+
+      getDefaultDepth() {
+        return this._defaultDepth;
+      }
+    }
+
+    class RenderedBatchedMesh3DInstance extends Rendered3DInstance {
+      constructor(
+        project,
+        instance,
+        associatedObjectConfiguration,
+        pixiContainer,
+        threeGroup,
+        pixiResourcesLoader
+      ) {
+        super(
+          project,
+          instance,
+          associatedObjectConfiguration,
+          pixiContainer,
+          threeGroup,
+          pixiResourcesLoader
+        );
+        this._pixiObject = new PIXI.Graphics();
+        this._pixiContainer.addChild(this._pixiObject);
+        this._threeObject = new THREE.Group();
+        this._threeObject.rotation.order = 'ZYX';
+        this._threeGroup.add(this._threeObject);
+        this._mesh = null;
+        this._palette = [];
+        this._material = null;
+        this._tint = '';
+        this._rebuildKey = '';
+        this._rebuildGeneration = 0;
+        this._defaultWidth = 100;
+        this._defaultHeight = 100;
+        this._defaultDepth = 100;
+        this.update();
+      }
+
+      static getThumbnail(project, resourcesLoader, objectConfiguration) {
+        const content = gd.castObject(
+          objectConfiguration,
+          gd.ObjectJsImplementation
+        ).content;
+        if (content.modelResourceName && resourcesLoader.getModel3DPreviewUrl) {
+          const previewUrl = resourcesLoader.getModel3DPreviewUrl(
+            project,
+            content.modelResourceName
+          );
+          if (previewUrl) return previewUrl;
+        }
+        return 'JsPlatform/Extensions/3d_model.svg';
+      }
+
+      _disposePreviewMesh() {
+        if (this._mesh) {
+          this._threeObject.remove(this._mesh);
+          this._mesh.dispose();
+          this._mesh = null;
+        }
+        for (const geometry of this._palette) {
+          geometry.dispose();
+        }
+        this._palette = [];
+      }
+
+      _updateMaterial(content) {
+        const tint = content.tint || '255;255;255';
+        if (!this._material) {
+          this._material = createInstancingPreviewMaterial(content);
+          this._tint = tint;
+          return;
+        }
+        if (this._tint !== tint) {
+          this._tint = tint;
+          this._material.color.setHex(
+            objectsRenderingService.rgbOrHexToHexNumber(tint)
+          );
+        }
+      }
+
+      async _rebuildPreview(content) {
+        const generation = ++this._rebuildGeneration;
+        const instanceCount = Math.min(
+          64,
+          Math.max(1, content.instanceCount || 16)
+        );
+        const palette = [];
+        for (const primitiveName of parseInstancingPreviewPrimitiveNames(
+          content.geometryTypes
+        )) {
+          palette.push(createInstancingPreviewPrimitiveGeometry(primitiveName));
+        }
+        if (content.modelResourceName) {
+          try {
+            const model = await this._pixiResourcesLoader.get3DModel(
+              this._project,
+              content.modelResourceName
+            );
+            palette.push(
+              ...extractInstancingPreviewModelGeometries(
+                model,
+                parseInstancingPreviewMeshNames(content.modelMeshNames)
+              )
+            );
+          } catch (error) {
+            // The model may be missing: keep the primitives.
+          }
+        }
+        if (palette.length === 0) {
+          palette.push(createInstancingPreviewPrimitiveGeometry('Box'));
+        }
+        if (this._wasDestroyed || generation !== this._rebuildGeneration) {
+          for (const geometry of palette) geometry.dispose();
+          return;
+        }
+
+        let vertexCount = 0;
+        let indexCount = 0;
+        for (const geometry of palette) {
+          vertexCount += geometry.getAttribute('position').count;
+          const index = geometry.getIndex();
+          indexCount += index ? index.count : 0;
+        }
+
+        this._disposePreviewMesh();
+        this._updateMaterial(content);
+        const mesh = new THREE.BatchedMesh(
+          instanceCount,
+          Math.max(1, vertexCount),
+          Math.max(1, indexCount),
+          this._material
+        );
+        for (const geometry of palette) {
+          mesh.addGeometry(geometry);
+        }
+        for (let index = 0; index < instanceCount; index++) {
+          mesh.addInstance(index % palette.length);
+        }
+        writeInstancingPreviewMatrices(
+          mesh,
+          instanceCount,
+          (index) => index % palette.length,
+          content.initialLayout || 'Grid'
+        );
+        this._palette = palette;
+        this._mesh = mesh;
+        this._threeObject.add(mesh);
+      }
+
+      update() {
+        const object = gd.castObject(
+          this._associatedObjectConfiguration,
+          gd.ObjectJsImplementation
+        );
+        const content = object.content;
+        this._defaultWidth = content.width || 100;
+        this._defaultHeight = content.height || 100;
+        this._defaultDepth = content.depth || 100;
+        const width = this.getWidth();
+        const height = this.getHeight();
+        const depth = this.getDepth();
+
+        this._threeObject.position.set(
+          this._instance.getX() + width / 2,
+          this._instance.getY() + height / 2,
+          this._instance.getZ() + depth / 2
+        );
+        this._threeObject.rotation.set(
+          RenderedInstance.toRad(this._instance.getRotationX()),
+          RenderedInstance.toRad(this._instance.getRotationY()),
+          RenderedInstance.toRad(this._instance.getAngle())
+        );
+        this._threeObject.scale.set(
+          width * (this._instance.isFlippedX() ? -1 : 1),
+          height * (this._instance.isFlippedY() ? -1 : 1),
+          depth * (this._instance.isFlippedZ() ? -1 : 1)
+        );
+
+        this._updateMaterial(content);
+        const rebuildKey = JSON.stringify([
+          content.instanceCount,
+          content.initialLayout,
+          content.geometryTypes,
+          content.modelResourceName,
+          content.modelMeshNames,
+        ]);
+        if (rebuildKey !== this._rebuildKey) {
+          this._rebuildKey = rebuildKey;
+          this._rebuildPreview(content);
+        }
+      }
+
+      onRemovedFromScene() {
+        this._rebuildGeneration++;
+        this._disposePreviewMesh();
+        if (this._material) {
+          this._material.dispose();
+          this._material = null;
+        }
+        super.onRemovedFromScene();
+        this._pixiObject.destroy({ children: true });
+      }
+
+      getDefaultWidth() {
+        return this._defaultWidth;
+      }
+
+      getDefaultHeight() {
+        return this._defaultHeight;
+      }
+
+      getDefaultDepth() {
+        return this._defaultDepth;
+      }
+    }
+
+    objectsRenderingService.registerInstanceRenderer(
+      'Scene3D::InstancedMesh3DObject',
+      RenderedInstancing3D2DInstance
+    );
+    objectsRenderingService.registerInstance3DRenderer(
+      'Scene3D::InstancedMesh3DObject',
+      RenderedInstancedMesh3DInstance
+    );
+    objectsRenderingService.registerInstanceRenderer(
+      'Scene3D::BatchedMesh3DObject',
+      RenderedInstancing3D2DInstance
+    );
+    objectsRenderingService.registerInstance3DRenderer(
+      'Scene3D::BatchedMesh3DObject',
+      RenderedBatchedMesh3DInstance
     );
   },
 };
