@@ -1,0 +1,274 @@
+.sidePanel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  background-color: var(--theme-surface-toolbar-background-color);
+}
+
+.sidePanelLeft {
+  border-right: 1px solid var(--theme-dialog-separator-color);
+}
+
+.sidePanelRight {
+  border-left: 1px solid var(--theme-dialog-separator-color);
+}
+
+.sidePanelPadded {
+  padding: 8px;
+}
+
+.panelHeader {
+  flex-shrink: 0;
+  padding: 10px 12px 0;
+}
+
+.toolbarCluster {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.segmentedControl {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: 28px;
+  padding: 2px;
+  border-radius: 6px;
+  background-color: var(--theme-text-field-default-background-color);
+}
+
+.segmentedControlSmall {
+  height: 26px;
+}
+
+.segmentedButton {
+  height: 100%;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--theme-text-default-color);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  transition: background-color 130ms ease, color 130ms ease;
+}
+
+.segmentedButton:hover {
+  background-color: var(--theme-list-item-hover-background-color);
+}
+
+.segmentedButton:focus-visible {
+  outline: 2px solid var(--theme-text-field-active-border-color);
+  outline-offset: -2px;
+}
+
+.segmentedButtonActive,
+.segmentedButtonActive:hover {
+  background-color: var(--theme-icon-button-selected-background-color);
+  color: var(--theme-icon-button-selected-color);
+}
+
+.outlinerRow {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 28px;
+  padding: 0 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 120ms ease;
+}
+
+.outlinerRow:hover {
+  background-color: var(--theme-list-item-hover-background-color);
+}
+
+.outlinerRowSelected,
+.outlinerRowSelected:hover {
+  background-color: var(--theme-selection-background-color);
+}
+
+.outlinerNodeIcon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  color: var(--theme-text-secondary-color);
+}
+
+.outlinerNodeIcon svg {
+  font-size: 16px;
+}
+
+.outlinerName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.outlinerActions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.outlinerRow:hover .outlinerActions,
+.outlinerRowSelected .outlinerActions {
+  opacity: 1;
+}
+
+.viewportOverlay {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  z-index: 2;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  transform: translateX(-50%);
+}
+
+.hint {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  z-index: 1;
+  max-width: 55%;
+  padding: 5px 10px;
+  border: 1px solid var(--theme-dialog-separator-color);
+  border-radius: 14px;
+  background-color: var(--theme-surface-toolbar-background-color);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  pointer-events: none;
+}
+
+.emptyState {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.emptyStateContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 24px;
+  color: var(--theme-text-secondary-color);
+  text-align: center;
+  pointer-events: auto;
+}
+
+.emptyStateShapes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.emptyStateIcon {
+  opacity: 0.5;
+}
+
+.emptyStateIcon svg {
+  font-size: 48px;
+}
+
+.inspectorEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px 8px;
+  color: var(--theme-text-secondary-color);
+  text-align: center;
+}
+
+.inspectorEmptyIcon {
+  opacity: 0.5;
+}
+
+.inspectorEmptyIcon svg {
+  font-size: 40px;
+}
+
+.listRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: background-color 120ms ease;
+}
+
+.listRow:hover {
+  background-color: var(--theme-list-item-hover-background-color);
+}
+
+.listRowSelected,
+.listRowSelected:hover {
+  background-color: var(--theme-selection-background-color);
+}
+
+.listRowName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.listRowActions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.listRow:hover .listRowActions,
+.listRowSelected .listRowActions {
+  opacity: 1;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid var(--theme-dialog-separator-color);
+  border-radius: 6px;
+  background-color: var(--theme-surface-window-background-color);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .segmentedButton,
+  .outlinerRow,
+  .outlinerActions,
+  .listRow,
+  .listRowActions {
+    transition: none;
+  }
+}

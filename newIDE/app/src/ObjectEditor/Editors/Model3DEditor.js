@@ -36,6 +36,12 @@ import PBRMaterialEditor from './PBRMaterialEditor';
 import ResourceSelectorWithThumbnail from '../../ResourcesList/ResourceSelectorWithThumbnail';
 import { ChoiceProperty } from '../../BehaviorsEditor/Editors/Physics2Editor';
 import { renameObjectAnimationReferences } from '../../Utils/ObjectAnimationsRefactoring';
+// The 3D model editor is only loaded when it is opened: it embeds Three.js
+// controls, an exporter and a whole viewport, which the object editor itself
+// does not need.
+const ModelEditorDialog = React.lazy(() =>
+  import(/* webpackChunkName: "ModelEditorDialog" */ '../../ModelEditor/ModelEditorDialog')
+);
 
 const gd: libGDevelop = global.gd;
 
@@ -115,6 +121,15 @@ const Model3DEditor = ({
   renderObjectNameField,
 }: EditorProps): React.Node => {
   const scrollView = React.useRef<?ScrollViewInterface>(null);
+  const [isModelEditorOpen, setIsModelEditorOpen] = React.useState<boolean>(
+    false
+  );
+  // The name of the model resource being edited. An empty string means a model
+  // created from the editor.
+  const [
+    modelEditorResourceName,
+    setModelEditorResourceName,
+  ] = React.useState<string>('');
 
   const [
     justAddedAnimationName,
@@ -288,13 +303,13 @@ const Model3DEditor = ({
     [forceUpdate, modelSize, objectConfiguration, onDimensionChange]
   );
 
-  const scanNewAnimations = React.useCallback(
-    () => {
-      if (!gltf) {
-        return;
-      }
-      setNameErrors({});
-
+  /**
+   * Add an animation to the object for each animation of the model that is not
+   * in its list yet. Returns true when the list changed.
+   */
+  const addMissingAnimations = React.useCallback(
+    // $FlowFixMe[value-as-type]
+    (modelGltf: GLTF): boolean => {
       const animationSources = mapFor(
         0,
         model3DConfiguration.getAnimationsCount(),
@@ -303,7 +318,7 @@ const Model3DEditor = ({
       );
 
       let hasAddedAnimation = false;
-      for (const resourceAnimation of gltf.animations) {
+      for (const resourceAnimation of modelGltf.animations) {
         if (animationSources.includes(resourceAnimation.name)) {
           continue;
         }
@@ -320,6 +335,66 @@ const Model3DEditor = ({
         newAnimation.delete();
         hasAddedAnimation = true;
       }
+      return hasAddedAnimation;
+    },
+    [model3DConfiguration]
+  );
+
+  /**
+   * Called after the 3D model editor saved the model file: the parsed model is
+   * cached by resource name, so it must be forgotten and read again, both for
+   * the preview and for the size of the object.
+   */
+  const onModelFileSaved = React.useCallback(
+    async (savedResourceName: string) => {
+      PixiResourcesLoader.burst3DModelCacheForResource(savedResourceName);
+
+      const currentResourceName = properties
+        .get('modelResourceName')
+        .getValue();
+      if (currentResourceName !== savedResourceName) {
+        // The model was created from the editor: the object now uses it.
+        onChangeProperty('modelResourceName', savedResourceName);
+      }
+      setModelEditorResourceName(savedResourceName);
+
+      try {
+        const reloadedGltf = await PixiResourcesLoader.get3DModel(
+          project,
+          savedResourceName
+        );
+        setGltf(reloadedGltf);
+        const hasAddedAnimation = addMissingAnimations(reloadedGltf);
+        if (hasAddedAnimation) {
+          forceUpdate();
+        }
+      } catch (error) {
+        console.warn('Unable to reload the 3D model after saving it:', error);
+      } finally {
+        // The size of the object depends on the geometry of the model.
+        onSizeUpdated();
+        if (onObjectUpdated) onObjectUpdated();
+      }
+    },
+    [
+      project,
+      properties,
+      onChangeProperty,
+      addMissingAnimations,
+      forceUpdate,
+      onSizeUpdated,
+      onObjectUpdated,
+    ]
+  );
+
+  const scanNewAnimations = React.useCallback(
+    () => {
+      if (!gltf) {
+        return;
+      }
+      setNameErrors({});
+
+      const hasAddedAnimation = addMissingAnimations(gltf);
       if (hasAddedAnimation) {
         forceUpdate();
         onSizeUpdated();
@@ -344,7 +419,7 @@ const Model3DEditor = ({
     [
       forceUpdate,
       gltf,
-      model3DConfiguration,
+      addMissingAnimations,
       onObjectUpdated,
       onSizeUpdated,
       showAlert,
@@ -505,6 +580,26 @@ const Model3DEditor = ({
             }}
             id={`model3d-object-modelResourceName`}
           />
+          <Line noMargin>
+            <RaisedButton
+              label={<Trans>Edit the 3D model</Trans>}
+              disabled={!properties.get('modelResourceName').getValue()}
+              onClick={() => {
+                setModelEditorResourceName(
+                  properties.get('modelResourceName').getValue()
+                );
+                setIsModelEditorOpen(true);
+              }}
+            />
+            <Spacer />
+            <FlatButton
+              label={<Trans>New 3D model</Trans>}
+              onClick={() => {
+                setModelEditorResourceName('');
+                setIsModelEditorOpen(true);
+              }}
+            />
+          </Line>
           <Text size="block-title" noMargin>
             <Trans>Default orientation</Trans>
           </Text>
@@ -805,6 +900,18 @@ const Model3DEditor = ({
           />
         </ResponsiveLineStackLayout>
       </Column>
+      {isModelEditorOpen && (
+        <React.Suspense fallback={null}>
+          <ModelEditorDialog
+            open={isModelEditorOpen}
+            project={project}
+            resourceName={modelEditorResourceName}
+            resourceManagementProps={resourceManagementProps}
+            onClose={() => setIsModelEditorOpen(false)}
+            onSaved={onModelFileSaved}
+          />
+        </React.Suspense>
+      )}
     </>
   );
 };

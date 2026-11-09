@@ -9,6 +9,10 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
 import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils';
+import {
+  GD_MODEL_MAIN_MODEL_FILENAME,
+  readZip,
+} from '../../ModelEditor/GDModelFormat';
 
 // The maximum anisotropic filtering level asked for smoothed textures.
 // It is automatically clamped to what the GPU supports when the texture is
@@ -234,6 +238,31 @@ const initRenderer = dracoDecoderFiles => {
   return true;
 };
 
+// A `.gdm` model is a ZIP archive holding the binary glTF. Detect it by its
+// magic bytes so that the preview does not depend on the file extension.
+// $FlowFixMe[missing-local-annot]
+const readGLBFromArchiveIfNeeded = async resourceData => {
+  const bytes = new Uint8Array(resourceData);
+  const isZipArchive =
+    bytes.length > 4 &&
+    bytes[0] === 0x50 && // P
+    bytes[1] === 0x4b && // K
+    bytes[2] === 0x03 &&
+    bytes[3] === 0x04;
+  if (!isZipArchive) return resourceData;
+
+  const entries = await readZip(resourceData);
+  const modelEntry = entries.find(
+    entry => entry.name === GD_MODEL_MAIN_MODEL_FILENAME
+  );
+  if (!modelEntry)
+    throw new Error('This model archive does not contain a model.');
+  return modelEntry.data.buffer.slice(
+    modelEntry.data.byteOffset,
+    modelEntry.data.byteOffset + modelEntry.data.byteLength
+  );
+};
+
 // Render a 3D model to the offscreen canvas and return the data URL.
 // resourceData is an ArrayBuffer fetched by the main thread (workers cannot
 // fetch file:// URLs in Electron due to network service sandboxing).
@@ -242,6 +271,10 @@ const renderModel = async (resourceUrl, resourceData, basePath) => {
   if (!renderer || !scene || !camera) {
     throw new Error('Renderer not initialized');
   }
+
+  // A `.gdm` container holds the model itself: read it here so that what
+  // follows only ever deals with a binary glTF.
+  const glbData = await readGLBFromArchiveIfNeeded(resourceData);
 
   // Parse the pre-fetched model data instead of fetching the URL,
   // so the worker never needs to make any network/file requests.
@@ -265,7 +298,7 @@ const renderModel = async (resourceUrl, resourceData, basePath) => {
     });
 
     loader.parse(
-      resourceData,
+      glbData,
       basePath,
       gltf => {
         if (!renderer || !scene || !camera) {
