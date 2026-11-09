@@ -191,6 +191,7 @@ module.exports = function (config) {
       `${gdjsRuntimePath}/howler-sound-manager/howler-sound-manager.js`,
       `${gdjsRuntimePath}/fontfaceobserver-font-manager/fontfaceobserver.js`,
       `${gdjsRuntimePath}/fontfaceobserver-font-manager/fontfaceobserver-font-manager.js`,
+      `${gdjsRuntimePath}/GDModelFormat.js`,
       `${gdjsRuntimePath}/Model3DManager.js`,
       `${gdjsRuntimePath}/EnvironmentManager.js`,
       `${gdjsRuntimePath}/TextureQuality3DManager.js`,

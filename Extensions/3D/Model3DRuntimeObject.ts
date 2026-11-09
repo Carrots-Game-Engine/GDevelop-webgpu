@@ -606,6 +606,63 @@ namespace gdjs {
       }
     }
 
+    /** What the engine knows about the model (sockets, colliders...), if any. */
+    getModelManifest(): gdjs.GDModelFormat.Manifest | null {
+      return this._runtimeScene
+        .getGame()
+        .getModel3DManager()
+        .getModelManifest(this._modelResourceName);
+    }
+
+    /**
+     * Check if the model has a socket with this name.
+     * @param socketName The name of the socket, as authored in the model.
+     */
+    hasSocket(socketName: string): boolean {
+      const manifest = this.getModelManifest();
+      return (
+        !!manifest && !!gdjs.GDModelFormat.findSocket(manifest, socketName)
+      );
+    }
+
+    private _getSocketWorldPosition(socketName: string): THREE.Vector3 | null {
+      return this._renderer.getSocketWorldPosition(
+        this.getModelManifest(),
+        socketName
+      );
+    }
+
+    /**
+     * Return the X position of a socket of the model, in the scene.
+     * The position is 0 when the model has no such socket (check it with
+     * `hasSocket`).
+     */
+    getSocketX(socketName: string): float {
+      const position = this._getSocketWorldPosition(socketName);
+      return position ? position.x : 0;
+    }
+
+    /** Return the Y position of a socket of the model, in the scene. */
+    getSocketY(socketName: string): float {
+      const position = this._getSocketWorldPosition(socketName);
+      return position ? position.y : 0;
+    }
+
+    /** Return the Z position of a socket of the model, in the scene. */
+    getSocketZ(socketName: string): float {
+      const position = this._getSocketWorldPosition(socketName);
+      return position ? position.z : 0;
+    }
+
+    /**
+     * Check if an event of the animation that was played was reached during the
+     * last frame.
+     * @param eventName The name of the event, as authored in the model.
+     */
+    hasAnimationEventHappened(eventName: string): boolean {
+      return this._renderer.getReachedAnimationEventNames().has(eventName);
+    }
+
     update(instanceContainer: gdjs.RuntimeInstanceContainer): void {
       const elapsedTime = this.getElapsedTime() / 1000;
       this._renderer.updateAnimation(elapsedTime);

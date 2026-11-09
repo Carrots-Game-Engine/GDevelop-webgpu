@@ -711,6 +711,76 @@ module.exports = {
         .addIncludeFile('Extensions/3D/Model3DRuntimeObject.js')
         .addIncludeFile('Extensions/3D/Model3DRuntimeObject3DRenderer.js');
 
+      // Sockets: points of the model that objects can be attached to (the
+      // muzzle of a weapon, the hand of a character...). They are authored in
+      // the 3D model editor and stored in the model file (a `.gdm` file) or in
+      // the resource metadata (for a `.glb`).
+      object
+        .addExpression(
+          'SocketX',
+          _('Socket X position'),
+          _('Return the X position of a socket of the model, in the scene.'),
+          _('Sockets'),
+          'res/conditions/3d_box.svg'
+        )
+        .addParameter('object', _('3D model'), 'Model3DObject', false)
+        .addParameter('string', _('Socket name'), '', false)
+        .setFunctionName('getSocketX');
+
+      object
+        .addExpression(
+          'SocketY',
+          _('Socket Y position'),
+          _('Return the Y position of a socket of the model, in the scene.'),
+          _('Sockets'),
+          'res/conditions/3d_box.svg'
+        )
+        .addParameter('object', _('3D model'), 'Model3DObject', false)
+        .addParameter('string', _('Socket name'), '', false)
+        .setFunctionName('getSocketY');
+
+      object
+        .addExpression(
+          'SocketZ',
+          _('Socket Z position'),
+          _('Return the Z position of a socket of the model, in the scene.'),
+          _('Sockets'),
+          'res/conditions/3d_box.svg'
+        )
+        .addParameter('object', _('3D model'), 'Model3DObject', false)
+        .addParameter('string', _('Socket name'), '', false)
+        .setFunctionName('getSocketZ');
+
+      object
+        .addCondition(
+          'HasSocket',
+          _('Has a socket'),
+          _('Check if the model has a socket with this name.'),
+          _('The model _PARAM0_ has the socket _PARAM1_'),
+          _('Sockets'),
+          'res/conditions/3d_box.svg',
+          'res/conditions/3d_box.svg'
+        )
+        .addParameter('object', _('3D model'), 'Model3DObject', false)
+        .addParameter('string', _('Socket name'), '', false)
+        .setFunctionName('hasSocket');
+
+      object
+        .addCondition(
+          'HasAnimationEvent',
+          _('Animation event happened'),
+          _(
+            'Check if an event of the animation that was played was reached during the last frame.'
+          ),
+          _('The animation of _PARAM0_ reached the event _PARAM1_'),
+          _('Animations and images'),
+          'res/conditions/animation24.png',
+          'res/conditions/animation.png'
+        )
+        .addParameter('object', _('3D model'), 'Model3DObject', false)
+        .addParameter('string', _('Event name'), '', false)
+        .setFunctionName('hasAnimationEventHappened');
+
       // Properties expressions/conditions/actions:
 
       // Deprecated
