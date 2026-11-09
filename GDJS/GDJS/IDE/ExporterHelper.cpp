@@ -1202,6 +1202,7 @@ void ExporterHelper::AddLibsInclude(bool pixiRenderers,
   InsertUnique(includesFiles, "AsyncTasksManager.js");
   InsertUnique(includesFiles, "inputmanager.js");
   InsertUnique(includesFiles, "jsonmanager.js");
+  InsertUnique(includesFiles, "GDModelFormat.js");
   InsertUnique(includesFiles, "Model3DManager.js");
   InsertUnique(includesFiles, "EnvironmentManager.js");
   InsertUnique(includesFiles, "PBRMaterialManager.js");

@@ -31,7 +31,9 @@ destinationPaths.forEach(destinationPath => {
     cwd: path.join(gdevelopRootPath, 'GDJS'),
   });
   if (output.code !== 0) {
-    shell.exit(0);
+    // Stop with an error: continuing would start the editor with an
+    // incomplete Runtime, making webpack fail with missing files.
+    shell.exit(1);
   }
 });
 

@@ -92,7 +92,9 @@ export const allResourceKindsAndMetadata = [
   {
     kind: 'model3D',
     displayName: (t`3D model`: any),
-    fileExtensions: ['glb'],
+    // `gdm` is the GDevelop container: a GLB plus the data the engine knows
+    // about the model (sockets, colliders, levels of detail).
+    fileExtensions: ['glb', 'gdm'],
     createNewResource: (): gdModel3DResource => new gd.Model3DResource(),
   },
   {

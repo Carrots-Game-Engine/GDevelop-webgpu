@@ -15,6 +15,7 @@ import { loadFontFace } from '../Utils/FontFaceLoader';
 import { checkIfCredentialsRequired } from '../Utils/CrossOrigin';
 import { dracoDecoderPath } from '../Utils/DracoDecoder';
 import { type ResourceKind } from '../ResourcesList/ResourceSource';
+import { isGDModelFileName, unpackGDModel } from '../ModelEditor/GDModelFormat';
 import EditorTextureQuality3DManager, {
   type EditorTextureQualityReport,
 } from './EditorTextureQuality3DManager';
@@ -221,6 +222,27 @@ const getOrCreateGltfLoader = () => {
   return gltfLoader;
 };
 
+/**
+ * Read the binary glTF of a model file. A `.gdm` file is a container holding
+ * the model (and what the engine knows about it): its model entry is read here,
+ * so that everything downstream sees a plain GLB.
+ */
+const readModelFileAsGLB = async (
+  url: string,
+  isPackedModel: boolean
+): Promise<ArrayBuffer> => {
+  const response = await fetch(url, {
+    credentials: checkIfCredentialsRequired(url) ? 'include' : 'same-origin',
+  });
+  if (!response.ok)
+    throw new Error(`Unable to read the 3D model (HTTP ${response.status}).`);
+  const arrayBuffer = await response.arrayBuffer();
+  if (!isPackedModel) return arrayBuffer;
+
+  const { glb } = await unpackGDModel(arrayBuffer);
+  return glb.buffer.slice(glb.byteOffset, glb.byteOffset + glb.byteLength);
+};
+
 const load3DModel = (
   project: gdProject,
   resourceName: string
@@ -241,14 +263,25 @@ const load3DModel = (
 
   const gltfLoader = getOrCreateGltfLoader();
   gltfLoader.withCredentials = checkIfCredentialsRequired(url);
+
+  const applyQuality = (gltf: any) => {
+    traverseToRemoveMetalnessFromMeshes(gltf.scene);
+    ensureSmoothNormals(gltf.scene);
+    applyModelTextureQuality(gltf.scene);
+    return gltf;
+  };
+
+  if (isGDModelFileName(resource.getFile())) {
+    return readModelFileAsGLB(url, true).then(buffer =>
+      gltfLoader.parseAsync(buffer, '').then(applyQuality)
+    );
+  }
+
   return new Promise((resolve, reject) => {
     gltfLoader.load(
       url,
       gltf => {
-        traverseToRemoveMetalnessFromMeshes(gltf.scene);
-        ensureSmoothNormals(gltf.scene);
-        applyModelTextureQuality(gltf.scene);
-        resolve(gltf);
+        resolve(applyQuality(gltf));
       },
       undefined,
       error => {
@@ -1302,6 +1335,16 @@ export default class PixiResourcesLoader {
 
       return material;
     }));
+  }
+
+  /**
+   * Forget the model loaded for a resource, so that the next read loads the
+   * file again. Used by the 3D model editor after it saved the model: what is
+   * cached is the parsed model, not the URL, so bursting the URL cache is not
+   * enough.
+   */
+  static burst3DModelCacheForResource(resourceName: string): void {
+    delete loadedOrLoading3DModelPromises[resourceName];
   }
 
   /**

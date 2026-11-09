@@ -66,6 +66,8 @@ namespace gdjs {
 
   class Model3DRuntimeObject3DRenderer extends gdjs.RuntimeObject3DRenderer {
     private _model3DRuntimeObject: gdjs.Model3DRuntimeObject;
+    /** Names of the events of the animation reached during the last frame. */
+    private _reachedAnimationEventNames: Set<string> = new Set<string>();
     /**
      * The 3D model stretched in a 1x1x1 cube.
      */
@@ -135,8 +137,57 @@ namespace gdjs {
       this._ownedMaterials.clear();
     }
 
+    /**
+     * Return the position of a socket of the model, in the scene, or null when
+     * the model has no such socket.
+     */
+    getSocketWorldPosition(
+      manifest: gdjs.GDModelFormat.Manifest | null,
+      socketName: string
+    ): THREE.Vector3 | null {
+      if (!manifest || !this._threeObject) return null;
+      const socket = gdjs.GDModelFormat.findSocket(manifest, socketName);
+      if (!socket) return null;
+
+      let socketNode: THREE.Object3D | null = null;
+      this._threeObject.traverse((child) => {
+        if (!socketNode && child.name === socket.node) socketNode = child;
+      });
+      if (!socketNode) return null;
+
+      this._threeObject.updateMatrixWorld(true);
+      const position = new THREE.Vector3().fromArray(socket.position);
+      // `localToWorld` uses the world matrix of the node, which includes the
+      // transform of the object in the scene.
+      return (socketNode as THREE.Object3D).localToWorld(position);
+    }
+
+    /** Names of the animation events reached during the last update. */
+    getReachedAnimationEventNames(): Set<string> {
+      return this._reachedAnimationEventNames;
+    }
+
     updateAnimation(timeDelta: float) {
+      const previousTime = this._action ? this._action.time : 0;
       this._animationMixer.update(timeDelta);
+      const currentTime = this._action ? this._action.time : 0;
+
+      this._reachedAnimationEventNames.clear();
+      if (!this._action) return;
+      const manifest = this._model3DRuntimeObject.getModelManifest();
+      if (!manifest) return;
+
+      const clipName = this._action.getClip().name;
+      const events = gdjs.GDModelFormat.getAnimationEvents(manifest, clipName);
+      for (const event of events) {
+        // The animation may have looped between the two updates: the event is
+        // then either after the previous time or before the current one.
+        const hasCrossedEvent =
+          currentTime >= previousTime
+            ? event.time > previousTime && event.time <= currentTime
+            : event.time > previousTime || event.time <= currentTime;
+        if (hasCrossedEvent) this._reachedAnimationEventNames.add(event.name);
+      }
     }
 
     override updatePosition() {

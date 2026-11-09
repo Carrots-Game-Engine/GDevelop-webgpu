@@ -297,6 +297,8 @@ namespace gdjs {
     // Associate resource names with loaded Three.js models.
     private _loadedThreeModels = new gdjs.ResourceCache<THREE_ADDONS.GLTF>();
     private _downloadedArrayBuffers = new gdjs.ResourceCache<ArrayBuffer>();
+    /** What the engine knows about packed (`.gdm`) models, by resource name. */
+    private _modelManifests = new Map<string, gdjs.GDModelFormat.Manifest>();
     private _sharedTextures = new SharedTextureCache();
 
     _resourceLoader: gdjs.ResourceLoader;
@@ -375,7 +377,20 @@ namespace gdjs {
       }
       this._downloadedArrayBuffers.delete(resource);
       try {
-        const gltf: THREE_ADDONS.GLTF = await loader.parseAsync(data, '');
+        let modelData: ArrayBuffer = data;
+        let manifest: gdjs.GDModelFormat.Manifest | null = null;
+        if (gdjs.GDModelFormat.isGDModelFileName(resource.file)) {
+          const archive = await gdjs.GDModelFormat.unpack(data);
+          modelData = archive.glb.buffer.slice(
+            archive.glb.byteOffset,
+            archive.glb.byteOffset + archive.glb.byteLength
+          ) as ArrayBuffer;
+          manifest = archive.manifest;
+        }
+        if (manifest) this._modelManifests.set(resource.name, manifest);
+        else this._modelManifests.delete(resource.name);
+
+        const gltf: THREE_ADDONS.GLTF = await loader.parseAsync(modelData, '');
         ensureSmoothNormals(gltf.scene);
         const textureQuality3DManager = this._resourceLoader
           .getRuntimeGame()
@@ -438,6 +453,17 @@ namespace gdjs {
     }
 
     /**
+     * Return what the engine knows about a model (its sockets, collision
+     * shapes, levels of detail and animation events), or null for a model that
+     * is a plain `.glb` file.
+     *
+     * @param resourceName The name of the model resource.
+     */
+    getModelManifest(resourceName: string): gdjs.GDModelFormat.Manifest | null {
+      return this._modelManifests.get(resourceName) || null;
+    }
+
+    /**
      * Return a 3D model.
      *
      * Caller should not modify the object but clone it.
@@ -458,6 +484,7 @@ namespace gdjs {
     dispose(): void {
       this._loadedThreeModels.clear();
       this._downloadedArrayBuffers.clear();
+      this._modelManifests.clear();
       this._sharedTextures.dispose();
       this._loader = null;
       if (this._dracoLoader) {

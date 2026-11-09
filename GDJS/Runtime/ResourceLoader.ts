@@ -349,6 +349,23 @@ namespace gdjs {
     }
 
     /**
+     * Load and process a single resource by name.
+     *
+     * Useful for extensions that need a resource which was not preloaded,
+     * for example a resource chosen while the scene is running.
+     */
+    async loadResource(resourceName: string): Promise<void> {
+      const resource =
+        this.privateResourceManager._resources.get(resourceName);
+      if (!resource) {
+        logger.warn('Unable to find resource "' + resourceName + '".');
+        return;
+      }
+      await this.privateResourceManager._loadResource(resource);
+      await this.privateResourceManager._processResource(resource);
+    }
+
+    /**
      * Load the resources that are needed to launch the first scene.
      */
     async loadGlobalAndFirstSceneResources(
