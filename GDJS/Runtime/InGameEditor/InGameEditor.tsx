@@ -2536,6 +2536,16 @@ namespace gdjs {
       this._applyEditorCameraToLayers();
     }
 
+    /**
+     * Called by the camera of the editor when it changed (moved, restored by
+     * the IDE, zoomed on an object...). The layers must render with the new
+     * camera immediately, even before the next frame.
+     */
+    _onEditorCameraChanged() {
+      if (!this._isEditorCameraApplied) return;
+      this._applyEditorCameraToLayers();
+    }
+
     moveSelectionUnderCursor() {
       if (!this._currentScene) return;
 
@@ -3095,6 +3105,8 @@ namespace gdjs {
     }
 
     activate(enable: boolean) {
+      // Instances can move while the game is running.
+      this._invalidatePickingCache();
       if (enable) {
         // The editor is shown again: render with the camera of the editor.
         this._applyEditorCameraToLayers();
@@ -4632,10 +4644,6 @@ namespace gdjs {
         // `RuntimeScene.render` opens a "render" section for its caller (the
         // game loop closes it): in edition mode, the editor is the caller.
         if (profiler) profiler.end('render');
-
-        // The frame is rendered: give the layers back their own camera so that
-        // the game never runs with the camera of the editor.
-        this._clearEditorCameraOverrides();
       }
       if (profiler) profiler.begin('in-game editor: toolbars');
       this._renderExtensionToolbars(domElementContainer);
