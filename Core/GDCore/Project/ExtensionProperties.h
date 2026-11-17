@@ -45,6 +45,11 @@ class GD_CORE_API ExtensionProperties {
     return false;
   }
 
+  /** Remove all properties for an extension (for example editor-only metadata). */
+  void RemoveExtension(const gd::String& extension) {
+    properties.erase(extension);
+  }
+
   std::map<gd::String, gd::PropertyDescriptor> GetAllExtensionProperties(
       const gd::String& extensionName, gd::Project& project);
 

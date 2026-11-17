@@ -17,6 +17,8 @@
 namespace gd {
 
 void GD_CORE_API ProjectStripper::StripProjectForExport(gd::Project &project) {
+  // Modular workflow data is editor-only and must not be sent to the runtime.
+  project.GetExtensionProperties().RemoveExtension("GDevelopModularWorkflow");
   project.GetObjects().GetObjectGroups().Clear();
   while (project.GetExternalEventsCount() > 0)
     project.RemoveExternalEvents(project.GetExternalEvents(0).GetName());
